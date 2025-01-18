@@ -25,12 +25,13 @@ int main(){
     }
     if (fork() == 0) {
             // Proces potomny
-            char shmid_str[10], semid_str[10];
+            char shmid_str[10], semid_str[10], key_str[10];
             sprintf(shmid_str, "%d", shmid);  // Konwersja shmid do stringa
             sprintf(semid_str, "%d", semid);
+            sprintf(key_str, "%d", key);
 
             // Uruchomienie procesu KapitanStatku i przekazanie shmid
-            execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, (char*)NULL);
+            execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char*)NULL);
             perror("exec KapitanStatku nie powiódł się");
             exit(1);
         }
@@ -38,13 +39,14 @@ int main(){
         // Proces Pasazerowie
         if (fork() == 0) {
             // Proces potomny
-            char shmid_str[10], semid_str[10];
+            char shmid_str[10], semid_str[10], key_str[10];
             sprintf(shmid_str, "%d", shmid);  // Konwersja shmid do stringa
             sprintf(semid_str, "%d", semid);
+            sprintf(key_str, "%d", key);
 
 
             // Uruchomienie procesu Pasazerowie i przekazanie shmid
-            execl("./pasazerowie", "./pasazerowie", shmid_str, semid_str, (char*)NULL);
+            execl("./pasazerowie", "./pasazerowie", shmid_str, semid_str, key_str, (char*)NULL);
             perror("exec Pasazerowie nie powiódł się");
             exit(1);
         }

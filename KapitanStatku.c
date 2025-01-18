@@ -14,14 +14,26 @@ void waitsem(int semid, int semnum){
 
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
+    if (argc != 4) {
         fprintf(stderr, "Błąd: Brak argumentu shmid\n");
         exit(1);
     }
 
+
     // Odbiór shmid z argumentów
     int shmid = atoi(argv[1]);
     int semid = atoi(argv[2]);
+    int key = atoi(argv[3]);
+
+
+    struct msgbuf opuscic_mostek;
+    int msgid = msgget(key, IPC_CREAT|0666);
+    strcpy(opuscic_mostek.mtext, "Opuscic mostek!");
+    opuscic_mostek.mtype = 1;
+
+    /*struct msgbuf powrot;
+    strcpy(powrot.mtext, "Powracamy!");
+    powrot.mtype = 2;*/
 
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
 
@@ -59,10 +71,31 @@ int main(int argc, char *argv[]) {
         }
         setsem(semid, 1);
     }
+
+    msgsnd(msgid, &opuscic_mostek, sizeof(opuscic_mostek.mtext), 0);
+    printf("Wyslano\n");
+    struct msgbuf odp;
+
+    if (msgrcv(msgid, &odp, sizeof(odp.mtext), 2, 0) == -1) {
+        perror("msgrcv");
+        exit(EXIT_FAILURE);
+    }
     printf("Odplywamy!\n");
-    sleep(3);
+
+
+
+
+    sleep(1);
+
+
+
+
+
+    setsem(semid, 2);
+    setsem(semid, 3);
 
     while (1) {
+        waitsem(semid, 3);
         if(shared->liczba_na_statku > 0 && shared->liczba_na_mostku < K){
             // Przenosimy pasażera ze statku na mostek
             int pasazer = shared->zaloga[shared->liczba_na_statku - 1]; // Ostatni pasażer na statku
@@ -75,8 +108,10 @@ int main(int argc, char *argv[]) {
             printf("KapitanStatku: Pasażer %d schodzi na mostek.\n", pasazer);
         }
         else if(shared->liczba_na_statku == 0){
+            setsem(semid, 3);
             break;
         }
+        setsem(semid, 3);
     }
 
     // Odłączenie pamięci dzielonej
