@@ -10,11 +10,22 @@
 #include <semaphore.h>
 #include <sys/sem.h>
 #include <string.h>
+#include <termios.h>
 #include <sys/mman.h>
+#include <signal.h>
 #include <sys/msg.h>
+#include <pthread.h>
+#include <time.h>
 
 #define N 50 
 #define K 6 
+#define R 3
+#define T1 5
+#define T2 5
+#define _POSIX_C_SOURCE 200809L
+int status = 0; // 0 - przygotowanie do wypłynięcia, 1 - decyzja o wyruszeniu 2 - rejs trwa,
+// 3 - rozładowanie po rejsie
+
 
 #define MSG_SIZE 128
 
@@ -24,6 +35,9 @@ struct msgbuf {
 };
 
 typedef struct shared {
+    int nakaz_przerwania_rejsow;
+    int nakaz_odplyniecia;
+    int nr_rejsu;
     int mostek[K];   
     int zaloga[N];   
     int liczba_na_mostku; 
