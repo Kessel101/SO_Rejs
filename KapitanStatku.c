@@ -1,15 +1,5 @@
 #include "oprs.h"
 
-void * nakaz_odplyniecia(SharedMemory *shared){
-    time_t start_time = time(NULL);
-    while(1){
-            if(time(NULL) - start_time >= T1 || shared->nakaz_odplyniecia == 1){
-                status = 1;
-                shared->nakaz_odplyniecia = 0;
-                break;
-            }
-    }
-}
 
     
 int main(int argc, char *argv[]) {
@@ -24,12 +14,16 @@ int main(int argc, char *argv[]) {
     int semid = atoi(argv[2]);
     int key = atoi(argv[3]);
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
+    if (shared == (SharedMemory *)-1) {
+    perror("Błąd przy dołączaniu pamięci dzielonej");
+    exit(EXIT_FAILURE);
+    }
 
     
     printf("Received semid: %d\n", semid);
     
 
-    pthread_t watek_odplyniecia, watek_zaprzestania;
+    pthread_t watek_odplyniecia;
     if (pthread_create(&watek_odplyniecia, NULL, (void *) nakaz_odplyniecia, shared) != 0) {
         perror("Nie można utworzyć wątku");
         exit(EXIT_FAILURE);
@@ -43,10 +37,7 @@ int main(int argc, char *argv[]) {
 
 
     // Inicjalizacja pamięci
-    for (int i = 0; i < K; i++) shared->mostek[i] = -1;
-    for (int i = 0; i < N; i++) shared->zaloga[i] = -1;
-    shared->liczba_na_mostku = 0;
-    shared->liczba_na_statku = 0;
+    inicjalizuj_dane(shared);
 
     printf("semid: %d\n", semid);
 

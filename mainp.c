@@ -42,6 +42,7 @@ int main(){
 
     shared->nakaz_przerwania_rejsow = 0;
     shared->nakaz_odplyniecia = 0;
+    shared->nr_rejsu = 0;
 
     while( shared->nr_rejsu < R && shared->nakaz_przerwania_rejsow == 0){
 

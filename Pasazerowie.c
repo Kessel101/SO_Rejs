@@ -1,35 +1,4 @@
-
 #include "oprs.h"
-
-
-
-void tworz_pasazerow(int n, int* tab){
-    for(int i = 0;  i < n; i++){
-        tab[i] = i;
-    }
-}
-
-void opuscic_mostek(int* mostek, int* pasazerowie){
-    for(int i = 0; i < K; i++){
-        pasazerowie[mostek[i]] = mostek[i];
-        mostek[i] = -1;
-    }
-}
-
-int pusty_mostek(int *mostek){
-   for(int i = 0; i < K; i++){
-    if(i != -1){
-        return -1;
-    }
-   } 
-   return 1;
-}
-
-void reload_pasazerow(int *pasazerowie, int nr_rejsu){
-    for(int i = 0; i < N; i++){
-        pasazerowie[i] = pasazerowie[N*(nr_rejsu + 1) + i];
-    }
-}
 
 
 int main(int argc, char *argv[]) {
@@ -37,8 +6,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Błąd: Brak argumentu shmid\n");
         exit(1);
     }
-
-    
 
     // Odbiór shmid z argumentów
     int shmid = atoi(argv[1]);
@@ -70,8 +37,6 @@ int main(int argc, char *argv[]) {
         }
         setsem(semid, 1);
     }
-
-
 
 
     waitsem(semid, 2);
