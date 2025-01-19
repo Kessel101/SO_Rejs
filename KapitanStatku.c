@@ -1,24 +1,11 @@
-#include "objects.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <signal.h>
-#include <pthread.h>
-
-void setsem(int semid, int semnum){
-	struct sembuf op = {semnum, 1, 0};
-	semop(semid, &op, 1);
-}
-void waitsem(int semid, int semnum){
-	struct sembuf op = {semnum, -1, 0};
-       	semop(semid, &op, 1);
-}
+#include "oprs.h"
 
 void * nakaz_odplyniecia(SharedMemory *shared){
     time_t start_time = time(NULL);
     while(1){
             if(time(NULL) - start_time >= T1 || shared->nakaz_odplyniecia == 1){
                 status = 1;
+                shared->nakaz_odplyniecia = 0;
                 break;
             }
     }
@@ -39,7 +26,7 @@ int main(int argc, char *argv[]) {
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
 
     
-
+    printf("Received semid: %d\n", semid);
     
 
     pthread_t watek_odplyniecia, watek_zaprzestania;
@@ -61,6 +48,7 @@ int main(int argc, char *argv[]) {
     shared->liczba_na_mostku = 0;
     shared->liczba_na_statku = 0;
 
+    printf("semid: %d\n", semid);
 
     printf("KapitanStatku: Mostek gotowy, czekam na pasażerów.\n");
 
@@ -89,6 +77,8 @@ int main(int argc, char *argv[]) {
 
     pthread_join(watek_odplyniecia, NULL);
 
+    status = 1;
+
     msgsnd(msgid, &opuscic_mostek, sizeof(opuscic_mostek.mtext), 0);
     printf("Wyslano\n");
     setsem(semid, 2);
@@ -99,8 +89,8 @@ int main(int argc, char *argv[]) {
         perror("msgrcv");
         exit(EXIT_FAILURE);
     }
+    printf("Kapitan Statku: Odplywamy!\n\n\n\n\n");
     status = 2;
-    printf("Odplywamy!\n");
 
 
 
@@ -113,6 +103,7 @@ int main(int argc, char *argv[]) {
     printf("Powracamy\n");
     setsem(semid, 4);
     setsem(semid, 5);
+    status = 3;
 
     while (1) {
         waitsem(semid, 5);
@@ -133,11 +124,11 @@ int main(int argc, char *argv[]) {
         }
         setsem(semid, 5);
     }
-
+    
+    status = 4;
 
     // Odłączenie pamięci dzielonej
     shmdt(shared);
-    shmctl(shmid, IPC_RMID, NULL);
     return 0;
     
 }

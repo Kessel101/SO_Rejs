@@ -1,13 +1,7 @@
-#include "objects.h"
 
-void setsem(int semid, int semnum){
-	struct sembuf op = {semnum, 1, 0};
-	semop(semid, &op, 1);
-}
-void waitsem(int semid, int semnum){
-	struct sembuf op = {semnum, -1, 0};
-       	semop(semid, &op, 1);
-}
+#include "oprs.h"
+
+
 
 void tworz_pasazerow(int n, int* tab){
     for(int i = 0;  i < n; i++){
@@ -37,9 +31,6 @@ void reload_pasazerow(int *pasazerowie, int nr_rejsu){
     }
 }
 
-void dummy_handler(int sig) {
-    printf("pasażer:Otrzymano sygnał %d, ale nie podejmuję żadnych działań.\n", sig);
-}
 
 int main(int argc, char *argv[]) {
     if (argc != 4) {
@@ -85,7 +76,7 @@ int main(int argc, char *argv[]) {
 
     waitsem(semid, 2);
     msgrcv(msgid, &msg, sizeof(msg.mtext), 1, 0);
-    printf("Pasażer: odebrano nazak opuszczenia mostka\n");
+    printf("Pasażer: odebrano nakaz opuszczenia mostka\n");
 
     while(pusty_mostek(shared->mostek) == 1){
             opuscic_mostek(shared->mostek, pasazerowie);

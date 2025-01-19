@@ -1,91 +1,93 @@
-#include "objects.h"
+#include "oprs.h"
 
-void setsem(int semid, int semnum){
-	struct sembuf op = {semnum, 1, 0};
-	semop(semid, &op, 1);
-}
-void waitsem(int semid, int semnum){
-	struct sembuf op = {semnum, -1, 0};
-       	semop(semid, &op, 1);
-}
 
-void dummy_handler(int sig) {
-    printf("mainp:Otrzymano sygnał %d, ale nie podejmuję żadnych działań.\n", sig);
-}
 
 int main(){
-    key_t key = ftok("shmfile", 65);  // Generowanie klucza
+    FILE *temp_file = fopen("A", "w");
+    if (temp_file == NULL) {
+        perror("Error creating temporary file A");
+        exit(EXIT_FAILURE);
+    }
+    fclose(temp_file);
+
+    key_t key = ftok("A", 65);  // Generowanie klucza
+    if (key == -1) {
+    perror("Error in ftok (mainp)");
+    unlink("A");
+    exit(EXIT_FAILURE);
+    }
+
     int shmid = shmget(key, sizeof(SharedMemory), 0666 | IPC_CREAT); // Tworzenie segmentu pamięci dzielonej
+    if (shmid == -1) {
+    perror("Error in shmget");
+    unlink("A");
+    exit(EXIT_FAILURE);
+    }
 
-    int semid = semget(key, 6, IPC_CREAT|0666);
-    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
-
-
-    int przerwac_rejsy = 0;
-
-
-    while( shared->nr_rejsu < R && przerwac_rejsy == 0){
+    int semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
+    if (semid == -1) {
+    perror("Error in semget");
+    unlink("A");
+    exit(EXIT_FAILURE);
+    }
 
 
 
-    for(int i = 0; i < 6; i++){
+    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0); // Podłączenie pamięci dzielonej
+    if (shared == (SharedMemory *)-1) {
+    perror("Error in shmat");
+    unlink("A");
+    exit(EXIT_FAILURE);
+    }
+
+    shared->nakaz_przerwania_rejsow = 0;
+    shared->nakaz_odplyniecia = 0;
+
+    while( shared->nr_rejsu < R && shared->nakaz_przerwania_rejsow == 0){
+
+    shared->liczba_na_mostku = 0;
+    shared->liczba_na_statku = 0;
+    status = 0;
+    
+
+    for(int i = 0; i < 6; i++){ //inicjalizacja semaforów
         semctl(semid, i, SETVAL, 0);
     }
-    pid_t pid;
 
-    if (shmid == -1) {
-        perror("Błąd przy tworzeniu pamięci dzielonej");
-        exit(1);
-    }
-    if (fork() == 0) {
-            // Proces potomny
-            char shmid_str[10], semid_str[10], key_str[10];
-            sprintf(shmid_str, "%d", shmid);  // Konwersja shmid do stringa
+    const char *processes[] = {"./kapitanstatku", "./pasazerowie", "./kapitanportu"};
+    
+    for (int i = 0; i < 3; i++) { //uruchomienie procesów
+        if (fork() == 0) {
+            char shmid_str[20] = {}, semid_str[20] = {}, key_str[20] = {};
+            sprintf(shmid_str, "%d", shmid);
             sprintf(semid_str, "%d", semid);
             sprintf(key_str, "%d", key);
-
-            // Uruchomienie procesu KapitanStatku i przekazanie shmid
-            execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char*)NULL);
-            perror("exec KapitanStatku nie powiódł się");
+            
+            printf("Passing int semid: %d to child\n", semid);
+            printf("Passing str semid: %d to child\n", semid_str);
+            if (i == 2) {
+                execl(processes[i], processes[i], shmid_str, semid_str, (char *)NULL);
+            }
+            else {
+                execl(processes[i], processes[i], shmid_str, semid_str, key_str, (char *)NULL);
+            }
+            perror("exec nie powiódł się");
+            unlink("A");
             exit(1);
         }
-
-        // Proces Pasazerowie
-        if (fork() == 0) {
-            // Proces potomny
-            char shmid_str[10], semid_str[10], key_str[10];
-            sprintf(shmid_str, "%d", shmid);  // Konwersja shmid do stringa
-            sprintf(semid_str, "%d", semid);
-            sprintf(key_str, "%d", key);
-
-
-            // Uruchomienie procesu Pasazerowie i przekazanie shmid
-            execl("./pasazerowie", "./pasazerowie", shmid_str, semid_str, key_str, (char*)NULL);
-            perror("exec Pasazerowie nie powiódł się");
-            exit(1);
-        }
-
-        if (fork() == 0) {
-            // Proces potomny
-            char pid_str;
-            char shmid_str[10], semid_str[10];
-            sprintf(shmid_str, "%d", shmid);  // Konwersja shmid do stringa
-            sprintf(semid_str, "%d", semid);
-
-            // Uruchomienie procesu Pasazerowie i przekazanie shmid
-            execl("./kapitanportu", "./kapitanportu", shmid_str, semid_str, (char*)NULL);
-            perror("exec kapitanportu nie powiódł się");
-            exit(1);
-        }
-
-        // Oczekiwanie na zakończenie procesów potomnych
-        wait(NULL);
-        wait(NULL);
-        shared->nr_rejsu++;
     }
+
+    for (int i = 0; i < 3; i++) {
+        wait(NULL);
+    }
+
+    shared->nr_rejsu++;
+}
 
         // Usuwanie pamięci dzielonej
+        shmdt(shared);
         shmctl(shmid, IPC_RMID, NULL);
+        unlink("A");
 
         return 0;
 }

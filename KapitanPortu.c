@@ -5,13 +5,13 @@
 #include <sys/shm.h>
 
 // Wskaźnik do pamięci współdzielonej
-SharedMemory* shared;
+//SharedMemory* shared;
 
 // Identyfikator semafora
-int semid;
+//int semid;
 
 // Handler sygnałów
-void handle_signal(int sig) {
+/*void handle_signal(int sig) {
     // Zabezpieczenie semaforem przed modyfikacją shared memory
     struct sembuf op = {0, -1, 0}; // Zablokowanie semafora
     semop(semid, &op, 1);
@@ -27,10 +27,10 @@ void handle_signal(int sig) {
     // Zwalnianie semafora po zakończeniu modyfikacji
     op.sem_op = 1;
     semop(semid, &op, 1);
-}
+}*/
 
 int main(int argc, char* argv[]) {
-    if (argc != 3) {
+    /*if (argc != 3) {
         fprintf(stderr, "Użycie: %s <shmid> <semid>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -68,6 +68,6 @@ int main(int argc, char* argv[]) {
 
     // Odłączenie pamięci współdzielonej (nieosiągalne w tym przykładzie)
     shmdt(shared);
-
+    */
     return 0;
 }

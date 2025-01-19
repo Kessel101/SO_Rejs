@@ -1,9 +1,10 @@
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef OBJECTS_H
+#define OBJECTS_H
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/shm.h>
 #include <sys/ipc.h>
@@ -22,9 +23,8 @@
 #define R 3
 #define T1 5
 #define T2 5
-#define _POSIX_C_SOURCE 200809L
-int status = 0; // 0 - przygotowanie do wypłynięcia, 1 - decyzja o wyruszeniu 2 - rejs trwa,
-// 3 - rozładowanie po rejsie
+int status; // 0 - przygotowanie do wypłynięcia, 1 - decyzja o wyruszeniu 2 - rejs trwa,
+// 3 - rozładowanie po rejsie // 4 - koniec rejsu
 
 
 #define MSG_SIZE 128
