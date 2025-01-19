@@ -34,9 +34,9 @@ void *nakaz_odplyniecia(SharedMemory *shared) {
     }
 
     while (1) {
-        if (time(NULL) - start_time >= T1 || shared->nakaz_odplyniecia == 1) {
-            status = 1;
-            shared->nakaz_odplyniecia = 0;
+        if (time(NULL) - start_time >= T1 || nakaz_odplyniecia_flag == 1) {
+            shared->status = 1;
+            nakaz_odplyniecia_flag = 0;
             break;
         }
     }
@@ -117,4 +117,105 @@ void reload_pasazerow(int *pasazerowie, int nr_rejsu) {
         int nowy_indeks = N * (nr_rejsu + 1) + i;
         pasazerowie[i] = pasazerowie[nowy_indeks];
     }
+}
+
+void przenies_paszazerow(SharedMemory *shared, int semid) {
+    // Oczekiwanie na dostęp do zasobów
+    waitsem(semid, 1);
+
+    // Przenoszenie pasażerów z mostka na statek
+    if (shared->liczba_na_mostku > 0 && shared->liczba_na_statku < N) {
+        int pasazer = shared->mostek[0];
+        shared->zaloga[shared->liczba_na_statku] = pasazer;
+        shared->liczba_na_statku++;
+        printf("KapitanStatku: Pasażer %d wszedł na statek.\n", pasazer);
+
+        // Przesunięcie pasażerów w kolejce na mostku
+        for (int i = 1; i < shared->liczba_na_mostku; i++) {
+            shared->mostek[i - 1] = shared->mostek[i];
+        }
+
+        // Zresetowanie ostatniego miejsca na mostku
+        shared->mostek[shared->liczba_na_mostku - 1] = -1;
+
+        // Zmniejszenie liczby pasażerów na mostku
+        shared->liczba_na_mostku--;
+    }
+
+    // Zwolnienie semafora
+    setsem(semid, 1);
+}
+
+void dodaj_na_mostek(SharedMemory *shared, int semid, int *pasazerowie, int *i) {
+    waitsem(semid, 1); // Czekaj na dostęp do zasobów
+
+    // Próba dodania pasażera na mostek
+    if (shared->liczba_na_mostku < K) {
+        shared->mostek[shared->liczba_na_mostku] = pasazerowie[*i];
+        shared->liczba_na_mostku++;
+        printf("Pasażerowie: Pasażer %d wszedł na mostek.\n", pasazerowie[(*i)++]);
+    } else {
+        printf("Pasażerowie: Mostek pełny, pasażer %d czeka.\n", pasazerowie[*i]);
+    }
+
+    setsem(semid, 1); // Zwolnij semafor
+}
+
+void zwroc_na_brzeg(SharedMemory *shared, int semid) {
+    while (1) {
+        waitsem(semid, 5); // Czekaj na dostęp do semafora
+
+        if (shared->liczba_na_mostku > 0) {
+            int pasazer = shared->mostek[0]; // Pierwszy pasażer na mostku
+            shared->mostek[0] = -1;         // Oczyszczenie miejsca na mostku
+
+            printf("Pasażer: Pasażer %d wraca na brzeg.\n", pasazer);
+
+            // Przesunięcie pasażerów na mostku
+            for (int i = 1; i < shared->liczba_na_mostku; i++) {
+                shared->mostek[i - 1] = shared->mostek[i];
+            }
+
+            shared->liczba_na_mostku--; // Zmniejszamy liczbę pasażerów na mostku
+        } else if (shared->liczba_na_statku == 0) {
+            // Jeśli nie ma już pasażerów na mostku ani na statku, zakończ pętlę
+            setsem(semid, 5); // Zwolnij semafor przed wyjściem
+            break;
+        }
+
+        setsem(semid, 5); // Zwolnij semafor
+    }
+}
+
+void przenies_pasazera_na_mostek(int semid, SharedMemory *shared) {
+    while (1) {
+        waitsem(semid, 5);
+        
+        if (shared->liczba_na_statku > 0 && shared->liczba_na_mostku < K) {
+            // Przenosimy pasażera ze statku na mostek
+            int pasazer = shared->zaloga[shared->liczba_na_statku - 1]; // Ostatni pasażer na statku
+            shared->zaloga[shared->liczba_na_statku - 1] = -1; // Oczyszczenie miejsca na statku
+            shared->liczba_na_statku--; // Zmniejszamy liczbę pasażerów na statku
+
+            // Dodajemy pasażera na mostek
+            shared->mostek[shared->liczba_na_mostku] = pasazer;
+            shared->liczba_na_mostku++;
+            printf("KapitanStatku: Pasażer %d schodzi na mostek.\n", pasazer);
+        }
+        else if (shared->liczba_na_statku == 0) {
+            setsem(semid, 5);
+            break;
+        }
+
+        setsem(semid, 5);
+    }
+}
+
+void ignore_signal(int sig) {
+    // Po prostu ignorujemy sygnał
+}
+
+void setup_signal_handling() {
+    signal(SIGQUIT, ignore_signal); // Ignoruj CTRL+\
+    signal(SIGINT, ignore_signal);   // Ignoruj CTRL+D
 }

@@ -2,6 +2,7 @@
 
 
 
+
 int main(){
     FILE *temp_file = fopen("A", "w");
     if (temp_file == NULL) {
@@ -24,14 +25,12 @@ int main(){
     exit(EXIT_FAILURE);
     }
 
-    int semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
+    int semid = semget(key, 7, IPC_CREAT|0666); // Tworzenie semaforów
     if (semid == -1) {
     perror("Error in semget");
     unlink("A");
     exit(EXIT_FAILURE);
     }
-
-
 
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0); // Podłączenie pamięci dzielonej
     if (shared == (SharedMemory *)-1) {
@@ -40,18 +39,35 @@ int main(){
     exit(EXIT_FAILURE);
     }
 
-    shared->nakaz_przerwania_rejsow = 0;
-    shared->nakaz_odplyniecia = 0;
     shared->nr_rejsu = 0;
+    shared->pid_main = getpid();
+    nakaz_odplyniecia_flag = 0;
+    nakaz_przerwania_rejsow_flag = 0;
 
-    while( shared->nr_rejsu < R && shared->nakaz_przerwania_rejsow == 0){
+    struct sigaction sa;
+    sa.sa_handler = ignore_signal;
+    sa.sa_flags = 0; // Brak specjalnych flag
+    sigemptyset(&sa.sa_mask); // Brak dodatkowych sygnałów do blokowania podczas obsługi
+
+    // Zignorowanie sygnałów SIGINT i SIGQUIT
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        perror("Błąd ustawiania sygnału SIGINT");
+        exit(EXIT_FAILURE);
+    }
+
+    if (sigaction(SIGQUIT, &sa, NULL) == -1) {
+        perror("Błąd ustawiania sygnału SIGQUIT");
+        exit(EXIT_FAILURE);
+    }
+
+    while( shared->nr_rejsu < R && nakaz_przerwania_rejsow_flag == 0){
 
     shared->liczba_na_mostku = 0;
     shared->liczba_na_statku = 0;
-    status = 0;
+    shared->status = 0;
     
 
-    for(int i = 0; i < 6; i++){ //inicjalizacja semaforów
+    for(int i = 0; i < 7; i++){ //inicjalizacja semaforów
         semctl(semid, i, SETVAL, 0);
     }
 
@@ -81,8 +97,16 @@ int main(){
     for (int i = 0; i < 3; i++) {
         wait(NULL);
     }
+    if(shared->status == 4){
+        printf("Rejs %d zakończony\n", shared->nr_rejsu);
+        shared->nr_rejsu++;
+    }
+    else{
+        printf("Rejs %d przerwany\n", shared->nr_rejsu);
+        break;
+    }
+    
 
-    shared->nr_rejsu++;
 }
 
         // Usuwanie pamięci dzielonej

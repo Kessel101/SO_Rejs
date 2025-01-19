@@ -13,19 +13,24 @@ int main(int argc, char *argv[]) {
     int shmid = atoi(argv[1]);
     int semid = atoi(argv[2]);
     int key = atoi(argv[3]);
+
+    signal(SIGINT, ignore_signal);  // Ignorowanie sygnału CTRL+D (SIGINT)
+    signal(SIGQUIT, ignore_signal); // Ignorowanie sygnału CTRL+\ (SIGQUIT)
+
+    //inicjalizacja pamięci dzielonej
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
     if (shared == (SharedMemory *)-1) {
     perror("Błąd przy dołączaniu pamięci dzielonej");
     exit(EXIT_FAILURE);
     }
 
-    
-    printf("Received semid: %d\n", semid);
-    
+
+    shared->pid_statku = getpid();
+    setsem(semid, 6);//pozwolenie kapitanowi portu na pobranie pitów
 
     pthread_t watek_odplyniecia;
     if (pthread_create(&watek_odplyniecia, NULL, (void *) nakaz_odplyniecia, shared) != 0) {
-        perror("Nie można utworzyć wątku");
+        perror("Nie można utworzyć wątku odplyniecia");
         exit(EXIT_FAILURE);
     }
 
@@ -39,36 +44,18 @@ int main(int argc, char *argv[]) {
     // Inicjalizacja pamięci
     inicjalizuj_dane(shared);
 
-    printf("semid: %d\n", semid);
-
+    //Koniec przygotowań do wpuszczenia pasażerów
     printf("KapitanStatku: Mostek gotowy, czekam na pasażerów.\n");
 
     setsem(semid, 0);
 
-    while (status == 0) {
-        waitsem(semid, 1);
-        // Przenoszenie pasażerów z mostka na statek
-        if (shared->liczba_na_mostku > 0 && shared->liczba_na_statku < N) {
-            // Przeniesienie pierwszego pasażera na statek
-            shared->zaloga[shared->liczba_na_statku] = shared->mostek[0];
-            shared->liczba_na_statku++;
-            printf("KapitanStatku: Pasażer %d wszedł na statek.\n", shared->mostek[0]);
-
-            // Przesunięcie kolejki na mostku
-            for (int i = 1; i < shared->liczba_na_mostku; i++) {
-                shared->mostek[i - 1] = shared->mostek[i];
-            }
-            if(shared->liczba_na_mostku == K){
-                shared->mostek[K - 1] = -1;
-            }
-            shared->liczba_na_mostku--;
-        }
-        setsem(semid, 1);
+    while (shared->status == 0) {
+        przenies_paszazerow(shared, semid);
     }
 
     pthread_join(watek_odplyniecia, NULL);
 
-    status = 1;
+    shared->status = 1;
 
     msgsnd(msgid, &opuscic_mostek, sizeof(opuscic_mostek.mtext), 0);
     printf("Wyslano\n");
@@ -80,8 +67,16 @@ int main(int argc, char *argv[]) {
         perror("msgrcv");
         exit(EXIT_FAILURE);
     }
+    
+    if(nakaz_przerwania_rejsow_flag == 1){
+        setsem(semid, 5);
+        przenies_pasazera_na_mostek(semid, shared);
+        shared->status = 5;
+        shmdt(shared);
+        return 0;
+    }
     printf("Kapitan Statku: Odplywamy!\n\n\n\n\n");
-    status = 2;
+    shared->status = 2;
 
 
 
@@ -94,29 +89,11 @@ int main(int argc, char *argv[]) {
     printf("Powracamy\n");
     setsem(semid, 4);
     setsem(semid, 5);
-    status = 3;
+    shared->status = 3;
 
-    while (1) {
-        waitsem(semid, 5);
-        if(shared->liczba_na_statku > 0 && shared->liczba_na_mostku < K){
-            // Przenosimy pasażera ze statku na mostek
-            int pasazer = shared->zaloga[shared->liczba_na_statku - 1]; // Ostatni pasażer na statku
-            shared->zaloga[shared->liczba_na_statku - 1] = -1; // Oczyszczenie miejsca na statku
-            shared->liczba_na_statku--; // Zmniejszamy liczbę pasażerów na statku
-
-            // Dodajemy pasażera na mostek
-            shared->mostek[shared->liczba_na_mostku] = pasazer;
-            shared->liczba_na_mostku++;
-            printf("KapitanStatku: Pasażer %d schodzi na mostek.\n", pasazer);
-        }
-        else if(shared->liczba_na_statku == 0){
-            setsem(semid, 5);
-            break;
-        }
-        setsem(semid, 5);
-    }
+    przenies_pasazera_na_mostek(semid, shared);
     
-    status = 4;
+    shared->status = 4;
 
     // Odłączenie pamięci dzielonej
     shmdt(shared);

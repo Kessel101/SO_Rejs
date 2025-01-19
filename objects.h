@@ -13,18 +13,23 @@
 #include <string.h>
 #include <termios.h>
 #include <sys/mman.h>
-#include <signal.h>
 #include <sys/msg.h>
 #include <pthread.h>
 #include <time.h>
+#include <signal.h>
 
 #define N 50 
 #define K 6 
 #define R 3
 #define T1 5
 #define T2 5
-int status; // 0 - przygotowanie do wypłynięcia, 1 - decyzja o wyruszeniu 2 - rejs trwa,
-// 3 - rozładowanie po rejsie // 4 - koniec rejsu
+
+
+
+
+// Flagi sygnałów
+int nakaz_odplyniecia_flag;
+int nakaz_przerwania_rejsow_flag;
 
 
 #define MSG_SIZE 128
@@ -35,13 +40,15 @@ struct msgbuf {
 };
 
 typedef struct shared {
-    int nakaz_przerwania_rejsow;
-    int nakaz_odplyniecia;
+    int status; // 0 - przygotowanie do wypłynięcia, 1 - decyzja o wyruszeniu 2 - rejs trwa,
+// 3 - rozładowanie po rejsie // 4 - koniec rejsu // 5 - przerwanie rejsu
     int nr_rejsu;
     int mostek[K];   
     int zaloga[N];   
     int liczba_na_mostku; 
     int liczba_na_statku; 
+    pid_t pid_statku;
+    pid_t pid_main;
 } SharedMemory;
 
 #endif

@@ -7,12 +7,13 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    signal(SIGINT, ignore_signal);  // Ignorowanie sygnału CTRL+D (SIGINT)
+    signal(SIGQUIT, ignore_signal); // Ignorowanie sygnału CTRL+\ (SIGQUIT)
+
     // Odbiór shmid z argumentów
     int shmid = atoi(argv[1]);
     int semid = atoi(argv[2]);
     int key = atoi(argv[3]);
-
-    
 
     struct msgbuf msg;
     int msgid = msgget(key, 0666|IPC_CREAT);
@@ -24,18 +25,13 @@ int main(int argc, char *argv[]) {
 
     waitsem(semid, 0);
     setsem(semid, 1);
+
+
+
+    // Przeniesienie pasażerów na mostek
     int i = 0;
     while(i < N){
-        waitsem(semid, 1);
-        // Próba dodania pasażera na mostek
-        if (shared->liczba_na_mostku < K) {
-            shared->mostek[shared->liczba_na_mostku] = pasazerowie[i];
-            shared->liczba_na_mostku++;
-            printf("Pasażerowie: Pasażer %d wszedł na mostek.\n", pasazerowie[i++]);
-        } else {
-            printf("Pasażerowie: Mostek pełny, pasażer %d czeka.\n", pasazerowie[i]);
-        }
-        setsem(semid, 1);
+        dodaj_na_mostek(shared, semid, pasazerowie, &i);
     }
 
 
@@ -43,7 +39,7 @@ int main(int argc, char *argv[]) {
     msgrcv(msgid, &msg, sizeof(msg.mtext), 1, 0);
     printf("Pasażer: odebrano nakaz opuszczenia mostka\n");
 
-    while(pusty_mostek(shared->mostek) == 1){
+    while(pusty_mostek(shared->mostek) == 0){
             opuscic_mostek(shared->mostek, pasazerowie);
         }
     struct msgbuf opuszczony;
@@ -53,34 +49,26 @@ int main(int argc, char *argv[]) {
     printf("Mostek opuszczony!\n");
     setsem(semid, 3);
 
+    while(1){
+        if(shared->status == 3){
+            break;
+        }
+        else if(shared-> status == 5){
+            printf("Pasażer: Rejs przerwany, wracam na brzeg\n");
+            zwroc_na_brzeg(shared, semid);
+            shmdt(shared);
+            return 0;
+        }
+
+    }
+
 
     //Rejs
-
     waitsem(semid, 4);
     
 
-    while (1) {
-        waitsem(semid, 5);
-        if(shared->liczba_na_mostku > 0){
-            int pasazer = shared->mostek[0]; // Pierwszy pasażer na mostku
-            shared->mostek[0] = -1; // Oczyszczenie miejsca na mostku
-            
-
-            printf("Pasażer: Pasażer %d wraca na brzeg.\n", pasazer);
-
-            // Przesunięcie pasażerów na mostku
-            for (int i = 1; i < shared->liczba_na_mostku; i++) {
-                shared->mostek[i - 1] = shared->mostek[i];
-            }
-            //shared->mostek[shared->liczba_na_mostku - 1] = -1; 
-            shared->liczba_na_mostku--; // Zmniejszamy liczbę pasażerów na mostku
-        }
-        else if(shared->liczba_na_statku == 0){
-            setsem(semid, 5);
-            break;
-        }
-        setsem(semid, 5);
-    }
+    //powrot na brzeg
+    zwroc_na_brzeg(shared, semid);
 
 
     // Odłączenie pamięci dzielonej
