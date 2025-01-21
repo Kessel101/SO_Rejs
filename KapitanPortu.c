@@ -26,6 +26,7 @@ int main(int argc, char *argv[]) {
     int shmid = atoi(argv[1]);
     int semid = atoi(argv[2]);
 
+
     // Podłączenie pamięci współdzielonej
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
     if (shared == NULL) {
