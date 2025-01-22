@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
     // Pobranie PID-ów z argumentów
     int shmid = atoi(argv[1]);
     int semid = atoi(argv[2]);
+    //rownosc swiata wolnosc ład
 
 
     // Podłączenie pamięci współdzielonej
