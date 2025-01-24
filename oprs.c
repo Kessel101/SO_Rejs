@@ -211,11 +211,51 @@ void przenies_pasazera_na_mostek(int semid, SharedMemory *shared) {
     }
 }
 
-void ignore_signal(int sig) {
-    // Po prostu ignorujemy sygnał
+void przejscie_na_mostku(SharedMemory* shared){ //kierunek 0 - na statek, 1 - na brzeg, PRZEJSCIE DOKONUJE SIE PRZED ZMNIEJSZENIEM LICZBY NA MOSTKU
+    for(int i = 1; i < shared->liczba_na_mostku; i++){
+        shared->mostek[i - 1] = shared->mostek[i];
+    }
+    
+
 }
 
-void setup_signal_handling() {
-    signal(SIGQUIT, ignore_signal); // Ignoruj CTRL+\
-    signal(SIGINT, ignore_signal);   // Ignoruj CTRL+D
+
+void wejdz_na_mostek(SharedMemory* shared, int semid, int id) {
+    waitsem(semid, 1);
+    if((id == 0 || shared->pasazerowie[id - 1] == 4) || (shared->pasazerowie[id - 1] > 0 && shared->liczba_na_mostku < K)){
+        shared->mostek[shared->liczba_na_mostku] = id;
+        printf("Pasazer %d wszedł na mostek i zajal %d pozycje\n", id, shared->liczba_na_mostku);
+        shared->liczba_na_mostku++;
+        shared->pasazerowie[id] = 1;
+    }
+    setsem(semid, 1);
+}
+
+void wejdz_na_statek(SharedMemory* shared, int semid, int id) {
+    waitsem(semid, 2);
+    if(shared->mostek[0] == id ){
+        shared->zaloga[shared->liczba_na_statku] = id;
+        printf("Pasazer %d wszedł na statek i zajal %d pozycje\n", id, shared->liczba_na_statku);
+        shared->liczba_na_statku++;
+        przejscie_na_mostku(shared);
+        shared->liczba_na_mostku--;
+        shared->pasazerowie[id] = 2;
+    }
+    setsem(semid, 2);
+}
+
+void zejdz_na_brzeg(SharedMemory* shared, int id){
+    shared->liczba_na_statku--;
+    printf("Pasazer %d zszedł na brzeg\n", id);
+    shared->pasazerowie[id] = 4;
+}
+
+int licz_pasazerow(SharedMemory* shared){
+    int liczba = 0;
+    for(int i = 0; i < LICZBA_PASAZEROW; i++){
+        if(shared->pasazerowie[i] != 4){
+            liczba++;
+        }
+    }
+    return liczba;
 }

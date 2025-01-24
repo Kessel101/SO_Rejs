@@ -7,8 +7,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    signal(SIGINT, ignore_signal);  // Ignorowanie sygnału CTRL+D (SIGINT)
-    signal(SIGQUIT, ignore_signal); // Ignorowanie sygnału CTRL+\ (SIGQUIT)
 
     // Odbiór shmid z argumentów
     int shmid = atoi(argv[1]);

@@ -14,8 +14,6 @@ int main(int argc, char *argv[]) {
     int semid = atoi(argv[2]);
     int key = atoi(argv[3]);
 
-    signal(SIGINT, ignore_signal);  // Ignorowanie sygnału CTRL+D (SIGINT)
-    signal(SIGQUIT, ignore_signal); // Ignorowanie sygnału CTRL+\ (SIGQUIT)
 
     //inicjalizacja pamięci dzielonej
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
@@ -25,24 +23,11 @@ int main(int argc, char *argv[]) {
     }
 
 
-    shared->pid_statku = getpid();
-    setsem(semid, 6);//pozwolenie kapitanowi portu na pobranie pitów
-
-    pthread_t watek_odplyniecia;
-    if (pthread_create(&watek_odplyniecia, NULL, (void *) nakaz_odplyniecia, shared) != 0) {
-        perror("Nie można utworzyć wątku odplyniecia");
-        exit(EXIT_FAILURE);
-    }
-
-
     struct msgbuf opuscic_mostek;
     int msgid = msgget(key, IPC_CREAT|0666);
     strcpy(opuscic_mostek.mtext, "Opuscic mostek!");
     opuscic_mostek.mtype = 1;
 
-
-    // Inicjalizacja pamięci
-    inicjalizuj_dane(shared);
 
     //Koniec przygotowań do wpuszczenia pasażerów
     printf("KapitanStatku: Mostek gotowy, czekam na pasażerów.\n");
@@ -53,7 +38,6 @@ int main(int argc, char *argv[]) {
         przenies_paszazerow(shared, semid);
     }
 
-    pthread_join(watek_odplyniecia, NULL);
 
     shared->status = 1;
 

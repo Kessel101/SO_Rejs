@@ -18,11 +18,12 @@
 #include <time.h>
 #include <signal.h>
 
-#define N 50 
+#define N 15
 #define K 6 
 #define R 3
 #define T1 5
 #define T2 5
+#define LICZBA_PASAZEROW 60
 
 
 
@@ -42,6 +43,7 @@ struct msgbuf {
 typedef struct shared {
     int status; // 0 - przygotowanie do wypłynięcia, 1 - decyzja o wyruszeniu 2 - rejs trwa,
 // 3 - rozładowanie po rejsie // 4 - koniec rejsu // 5 - przerwanie rejsu
+    int pasazerowie[LICZBA_PASAZEROW];
     int nr_rejsu;
     int mostek[K];   
     int zaloga[N];   

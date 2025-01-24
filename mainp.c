@@ -44,23 +44,23 @@ int main(){
     nakaz_odplyniecia_flag = 0;
     nakaz_przerwania_rejsow_flag = 0;
 
-    struct sigaction sa;
-    sa.sa_handler = ignore_signal;
-    sa.sa_flags = 0; // Brak specjalnych flag
-    sigemptyset(&sa.sa_mask); // Brak dodatkowych sygnałów do blokowania podczas obsługi
 
-    // Zignorowanie sygnałów SIGINT i SIGQUIT
-    if (sigaction(SIGINT, &sa, NULL) == -1) {
-        perror("Błąd ustawiania sygnału SIGINT");
-        exit(EXIT_FAILURE);
-    }
+    while(shared->nr_rejsu < R && nakaz_przerwania_rejsow_flag == 0){
 
-    if (sigaction(SIGQUIT, &sa, NULL) == -1) {
-        perror("Błąd ustawiania sygnału SIGQUIT");
-        exit(EXIT_FAILURE);
-    }
-
-    while( shared->nr_rejsu < R && nakaz_przerwania_rejsow_flag == 0){
+        for(int i = 0; i < LICZBA_PASAZEROW; i++){
+            int id;
+            char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {};
+            sprintf(shmid_str, "%d", shmid);
+            sprintf(semid_str, "%d", semid);
+            sprintf(key_str, "%d", key);
+            if(fork() == 0){
+                sprintf(id, "%d", i);
+                execl("./pas", "./pas", id, shmid_str, semid_str, key_str, (char *)NULL);
+                perror("exec pasazer nie powiódł się");
+                unlink("A");
+                exit(1);
+            }
+        }
 
     shared->liczba_na_mostku = 0;
     shared->liczba_na_statku = 0;
@@ -71,9 +71,9 @@ int main(){
         semctl(semid, i, SETVAL, 0);
     }
 
-    const char *processes[] = {"./kapitanstatku", "./pasazerowie", "./kapitanportu"};
+    const char *processes[] = {"./kapitanstatku", "./kapitanportu"};
     
-    for (int i = 0; i < 3; i++) { //uruchomienie procesów
+    for (int i = 0; i < 2; i++) { //uruchomienie procesów
         if (fork() == 0) {
             char shmid_str[20] = {}, semid_str[20] = {}, key_str[20] = {};
             sprintf(shmid_str, "%d", shmid);
@@ -82,7 +82,7 @@ int main(){
             
             printf("Passing int semid: %d to child\n", semid);
             printf("Passing str semid: %d to child\n", semid_str);
-            if (i == 2) {
+            if (i == 1) {
                 execl(processes[i], processes[i], shmid_str, semid_str, (char *)NULL);
             }
             else {
