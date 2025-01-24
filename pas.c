@@ -1,6 +1,6 @@
 #include "oprs.h"
 
-int main(int argc, int* argv){
+int main(int argc, char* argv[]){
     if (argc != 4) {
         fprintf(stderr, "Błąd: Brak argumentu shmid\n");
         exit(1);
@@ -9,6 +9,7 @@ int main(int argc, int* argv){
     int id = atoi(argv[1]);
     int shmid = atoi(argv[2]);
     int semid = atoi(argv[3]);
+
 
     enum akcje {na_brzegu, na_mostku, na_statku, czeka, poszedl_do_domu}; 
     enum akcje akcja = na_brzegu;
@@ -19,11 +20,11 @@ int main(int argc, int* argv){
         exit(EXIT_FAILURE);
     }
 
-    shared->pasazerowie[id] = na_brzegu;
-    while(shared->pasazerowie[id] != poszedl_do_domu){ {
+    shared->pasazerowie[id] = czeka;
+    while(shared->pasazerowie[id] != poszedl_do_domu){ 
         switch(akcja){
             case czeka:
-                waitsem(semid, 0); //czekaj na rozkazy kapitana
+                sleep(2); //czekaj na rozkazy kapitana
                 break;
             case na_brzegu:
                 wejdz_na_mostek(shared, semid, id); //pasazerowie wchodza na mostek
@@ -33,11 +34,11 @@ int main(int argc, int* argv){
                 break;
             case na_statku:
                 waitsem(semid, 3); //czekaj na rozkaz opuszczenia mostka
-                zejdz_na_brzeg(shared, semid, id); //pasazerowie schodza na brzeg i wracaja do domu
+                setsem(semid, 3);
+                zejdz_na_brzeg(shared, id); //pasazerowie schodza na brzeg i wracaja do domu
                 break;
         }
     }
-
     shmdt(shared);
     return 0;
 }

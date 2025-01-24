@@ -23,25 +23,31 @@ int main(int argc, char *argv[]) {
     }
 
 
-    struct msgbuf opuscic_mostek;
+    /*struct msgbuf opuscic_mostek;
     int msgid = msgget(key, IPC_CREAT|0666);
     strcpy(opuscic_mostek.mtext, "Opuscic mostek!");
-    opuscic_mostek.mtype = 1;
+    opuscic_mostek.mtype = 1;*/
 
 
     //Koniec przygotowań do wpuszczenia pasażerów
-    printf("KapitanStatku: Mostek gotowy, czekam na pasażerów.\n");
+    printf("KapitanStatku: Mostek gotowy, czekam na pasażerów.\n\n\n");
+    zapros_pasazerow(shared);
+
+    //setsem(semid, 0);
 
     setsem(semid, 0);
 
-    while (shared->status == 0) {
-        przenies_paszazerow(shared, semid);
-    }
+    time_t start_time = time(NULL);
+    while(time(NULL) - start_time < T1); //Proces wpuszczania pasazerow
+
+    shared->status = 1; //Rozpoczecie przygotowan do wyplyniecia
+    
+
+    kaz_pasazerom_czekac(shared);
+    opuscic_mostek(shared);
 
 
-    shared->status = 1;
-
-    msgsnd(msgid, &opuscic_mostek, sizeof(opuscic_mostek.mtext), 0);
+    /*msgsnd(msgid, &opuscic_mostek, sizeof(opuscic_mostek.mtext), 0);
     printf("Wyslano\n");
     setsem(semid, 2);
     struct msgbuf odp;
@@ -58,26 +64,19 @@ int main(int argc, char *argv[]) {
         shared->status = 5;
         shmdt(shared);
         return 0;
-    }
-    printf("Kapitan Statku: Odplywamy!\n\n\n\n\n");
+    }*/
+    printf("Kapitan Statku: Odplywamy!\n\n\n");
     shared->status = 2;
-
-
 
     //Rejs trwa
     sleep(1);
 
+    printf("Kapitan Statku: Powracamy\n\n\n");
+    shared->status = 3; //Rozladowanie po rejsie
 
+    setsem(semid, 3);
 
-
-    printf("Powracamy\n");
-    setsem(semid, 4);
-    setsem(semid, 5);
-    shared->status = 3;
-
-    przenies_pasazera_na_mostek(semid, shared);
-    
-    shared->status = 4;
+    shared->status = 4; //koniec rejsu
 
     // Odłączenie pamięci dzielonej
     shmdt(shared);

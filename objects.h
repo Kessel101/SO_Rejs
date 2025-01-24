@@ -23,7 +23,7 @@
 #define R 3
 #define T1 5
 #define T2 5
-#define LICZBA_PASAZEROW 60
+#define LICZBA_PASAZEROW 40
 
 
 

@@ -47,33 +47,37 @@ int main(){
 
     while(shared->nr_rejsu < R && nakaz_przerwania_rejsow_flag == 0){
 
+        shared->liczba_na_mostku = 0;
+        shared->liczba_na_statku = 0;
+        shared->status = 0;
+
+        for(int i = 0; i < 7; i++){ //inicjalizacja semaforów
+        semctl(semid, i, SETVAL, 0);
+        }
+
+
+        char id[20] = {};
+        char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {};
+        sprintf(shmid_str, "%d", shmid);
+        sprintf(semid_str, "%d", semid);
+        sprintf(key_str, "%d", key);
         for(int i = 0; i < LICZBA_PASAZEROW; i++){
-            int id;
-            char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {};
-            sprintf(shmid_str, "%d", shmid);
-            sprintf(semid_str, "%d", semid);
-            sprintf(key_str, "%d", key);
             if(fork() == 0){
                 sprintf(id, "%d", i);
-                execl("./pas", "./pas", id, shmid_str, semid_str, key_str, (char *)NULL);
+                execl("./pasazerowie", "./pasazerowie", id, shmid_str, semid_str, (char *)NULL);
                 perror("exec pasazer nie powiódł się");
                 unlink("A");
                 exit(1);
             }
         }
 
-    shared->liczba_na_mostku = 0;
-    shared->liczba_na_statku = 0;
-    shared->status = 0;
+    
     
 
-    for(int i = 0; i < 7; i++){ //inicjalizacja semaforów
-        semctl(semid, i, SETVAL, 0);
-    }
-
+    
     const char *processes[] = {"./kapitanstatku", "./kapitanportu"};
     
-    for (int i = 0; i < 2; i++) { //uruchomienie procesów
+    /*for (int i = 0; i < 2; i++) { //uruchomienie procesów kapitanów
         if (fork() == 0) {
             char shmid_str[20] = {}, semid_str[20] = {}, key_str[20] = {};
             sprintf(shmid_str, "%d", shmid);
@@ -92,17 +96,22 @@ int main(){
             unlink("A");
             exit(1);
         }
-    }
+    }*/
+
+    int i = 0;
+   execl(processes[i], processes[i], shmid_str, semid_str, key_str, (char *)NULL);
+
+
 
     for (int i = 0; i < 3; i++) {
         wait(NULL);
     }
     if(shared->status == 4){
-        printf("Rejs %d zakończony\n", shared->nr_rejsu);
+        printf("Rejs %d zakończony\n\n\n", shared->nr_rejsu);
         shared->nr_rejsu++;
     }
     else{
-        printf("Rejs %d przerwany\n", shared->nr_rejsu);
+        printf("Rejs %d przerwany\n\n\n", shared->nr_rejsu);
         break;
     }
     
@@ -113,6 +122,5 @@ int main(){
         shmdt(shared);
         shmctl(shmid, IPC_RMID, NULL);
         unlink("A");
-
         return 0;
 }
