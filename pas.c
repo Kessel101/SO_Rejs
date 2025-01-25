@@ -11,13 +11,16 @@ int main(int argc, char* argv[]){
     int semid = atoi(argv[3]);
     int key = atoi(argv[4]);
 
-    printf("Utworzono pasazera %d\n", id);
+    waitsem(semid, 5);
+    setsem(semid, 5);
 
-    int msgid = msgget(key, 0666);
+    printf(PASAZER "Utworzono pasazera %d\n", id);
+
+    /*int msgid = msgget(key, 0666);
     if (msgid == -1) {
         perror("Error accessing message queue");
         exit(EXIT_FAILURE);
-    }
+    }*/
     
     //waitsem(semid, 5);
 
@@ -32,11 +35,11 @@ int main(int argc, char* argv[]){
     shared->pasazerowie[id] = czeka;
     setsem(semid, 1);
 
-    struct msgbuf msg;
+    //struct msgbuf msg;
     setsem(semid, 2);
     while(shared->pasazerowie[id] != poszedl_do_domu){ 
         //printf("jestem niesmiertelny\n");
-        waitsem(semid, 1);
+        //waitsem(semid, 1);
         /*if (msgrcv(msgid, &msg, sizeof(msg.mtext), 1, IPC_NOWAIT) != -1) {
             printf("Passenger %d: Received message: %s\n", getpid(), msg.mtext);
             if (strcmp(msg.mtext, "Koniec rejsow na dzis") == 0) {
@@ -51,7 +54,6 @@ int main(int argc, char* argv[]){
             case czeka:
                 //printf("Pasazer %d czeka\n", id);
                 //usleep(500); //czekaj na rozkazy kapitana
-                setsem(semid, 1);
                 break;
             case na_brzegu:
                 //printf("Pasazer %d jest na brzegu\n", id);
@@ -61,21 +63,20 @@ int main(int argc, char* argv[]){
                 wejdz_na_mostek(shared, semid, id); //pasazerowie wchodza na mostek
                 //printf("aas");
                 setsem(semid, 0);
-                setsem(semid, 1);
                 break;
             case na_mostku:
                 waitsem(semid, 0);
                 wejdz_na_statek(shared, semid, id); //pasazerowie wchodza na statek
                 setsem(semid, 0);
-                setsem(semid, 1);
                 break;
             case na_statku:
-                setsem(semid, 1);
+                //setsem(semid, 1);
                 waitsem(semid, 3); //czekaj na rozkaz opuszczenia mostka
                 setsem(semid, 3);
                 zejdz_na_brzeg(shared, id); //pasazerowie schodza na brzeg i wracaja do domu
                 break;
         }
+        //setsem(semid, 1);
     }
     shmdt(shared);
     return 0;

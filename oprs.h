@@ -32,8 +32,8 @@ void opuscic_mostek(SharedMemory* shared);
 void zapros_pasazerow(SharedMemory* shared);
 void kaz_pasazerom_czekac(SharedMemory* shared);
 void wyrzuc_pasazerow (SharedMemory* shared);
-
-
+void set_color(const char *color_code); //30 — czarny, 31 — czerwony, 32 — zielony, 33 — żółty, 34 — niebieski, 35 — fioletowy, 36 — cyjanowy, 37 — biały
+void reset_color();
 
 
 

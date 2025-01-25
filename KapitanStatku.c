@@ -36,11 +36,14 @@ int main(int argc, char *argv[]) {
         }
     setsem(semid, 1);
 
-    for (int i = 0; i < LICZBA_PASAZEROW; i++) {
-        waitsem(semid, 2); // Oczekuje na inicjalizację każdego pasażera
+    if(shared->nr_rejsu == 0){
+        for (int i = 0; i < LICZBA_PASAZEROW; i++) {
+            waitsem(semid, 2); // Oczekuje na inicjalizację każdego pasażera
+        }
     }
+    
 
-    printf("KapitanStatku: Mostek gotowy, czekam na pasażerów.\n\n\n");
+    printf(KAPITAN_STATKU "\n\nKapitanStatku: Mostek gotowy, czekam na pasażerów.\n\n\n");
     zapros_pasazerow(shared);
 
     
@@ -77,16 +80,21 @@ int main(int argc, char *argv[]) {
         shmdt(shared);
         return 0;
     }*/
-    printf("Kapitan Statku: Odplywamy!\n\n\n");
+    printf(KAPITAN_STATKU "\n\nKapitan Statku: Odplywamy!\n\n");
     shared->status = 2;
 
     //Rejs trwa
     sleep(1);
 
-    printf("Kapitan Statku: Powracamy\n\n\n");
+    printf(KAPITAN_STATKU "\n\nKapitan Statku: Powracamy\n\n\n");
     shared->status = 3; //Rozladowanie po rejsie
 
+    shared->liczba_przewiezionych += shared->liczba_na_statku;
+
     setsem(semid, 3);
+    while(shared->liczba_na_statku > 0){
+        sleep(1);
+    }
 
     shared->status = 4; //koniec rejsu
 

@@ -215,10 +215,12 @@ void przenies_pasazera_na_mostek(int semid, SharedMemory *shared) {
 }*/
 
 void przejscie_na_mostku(SharedMemory* shared){ //kierunek 0 - na statek, 1 - na brzeg, PRZEJSCIE DOKONUJE SIE PRZED ZMNIEJSZENIEM LICZBY NA MOSTKU
-    for(int i = 1; i < shared->liczba_na_mostku; i++){
+    for(int i = 1; i < K; i++){
         shared->mostek[i - 1] = shared->mostek[i];
     }
-    
+    if(shared->liczba_na_mostku == 1){
+        shared->mostek[0] = -1;
+    }
 
 }
 
@@ -226,7 +228,7 @@ void przejscie_na_mostku(SharedMemory* shared){ //kierunek 0 - na statek, 1 - na
 void wejdz_na_mostek(SharedMemory* shared, int semid, int id) {
     if((id == 0 || shared->pasazerowie[id - 1] == 4 || (shared->pasazerowie[id - 1] > 1 && shared->liczba_na_mostku < K) && shared->pasazerowie[id] != 2)){
         int i = shared->liczba_na_mostku;
-        printf("Pasazer %d wszedł na mostek i zajal %d pozycje\n", id, shared->liczba_na_mostku);
+        printf(PASAZER "Pasazer %d wszedł na mostek i zajal %d pozycje\n", id, shared->liczba_na_mostku);
         //waitsem(semid, 1);
         shared->mostek[shared->liczba_na_mostku] = id;
         shared->liczba_na_mostku++;
@@ -236,9 +238,9 @@ void wejdz_na_mostek(SharedMemory* shared, int semid, int id) {
 }
 
 void wejdz_na_statek(SharedMemory* shared, int semid, int id) {
-    if(shared->mostek[0] == id ){
+    if(shared->mostek[0] == id && shared->liczba_na_statku < N){
         shared->zaloga[shared->liczba_na_statku] = id;
-        printf("Pasazer %d wszedł na statek i zajal %d pozycje\n", id, shared->liczba_na_statku);
+        printf(PASAZER "Pasazer %d wszedł na statek i zajal %d pozycje\n", id, shared->liczba_na_statku);
         shared->liczba_na_statku++;
         przejscie_na_mostku(shared);
         shared->liczba_na_mostku--;
@@ -248,7 +250,7 @@ void wejdz_na_statek(SharedMemory* shared, int semid, int id) {
 
 void zejdz_na_brzeg(SharedMemory* shared, int id){
     shared->liczba_na_statku--;
-    printf("Pasazer %d zszedł na brzeg\n", id);
+    printf(PASAZER "Pasazer %d zszedł na brzeg\n", id);
     shared->pasazerowie[id] = 4;
 }
 
@@ -263,9 +265,11 @@ int licz_pasazerow(SharedMemory* shared){
 }
 
 void opuscic_mostek(SharedMemory* shared){
-    for(int i = 0; i < K; i++){
+    printf("\n");
+    for(int i = K-1; i >= 0; i--){
         if(shared->mostek[i] != -1){
             shared->pasazerowie[shared->mostek[i]] = 0;
+            printf(KAPITAN_STATKU "Pasazer %d opuscil mostek z %d pozycji\n", shared->mostek[i], i);
             shared->mostek[i] = -1;
         }
     }
@@ -291,4 +295,12 @@ void wyrzuc_pasazerow (SharedMemory* shared){
     for(int i = 0; i < LICZBA_PASAZEROW; i++){
             shared->pasazerowie[i] = 4;
     }
+}
+
+void set_color(const char *color_code) {
+    printf("\033[%sm", color_code);  // Ustaw kolor na podstawie kodu
+}
+
+void reset_color() {
+    printf("\033[0m");  // Resetuj kolor do domyślnego
 }

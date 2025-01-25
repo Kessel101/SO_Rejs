@@ -24,7 +24,12 @@
 #define R 3
 #define T1 3
 #define T2 5
-#define LICZBA_PASAZEROW 5
+#define LICZBA_PASAZEROW 20
+
+#define PASAZER "\033[33m"
+#define KAPITAN_STATKU "\033[34m"
+#define KAPITAN_PORTU "\033[35m"
+#define MAINP "\033[32m"
 
 
 
@@ -50,8 +55,7 @@ typedef struct shared {
     int zaloga[N];   
     int liczba_na_mostku; 
     int liczba_na_statku; 
-    pid_t pid_statku;
-    pid_t pid_main;
+    int liczba_przewiezionych;
 } SharedMemory;
 
 #endif
