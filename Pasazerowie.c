@@ -1,4 +1,4 @@
-#include "oprs.h"
+/*#include "oprs.h"
 
 
 int main(int argc, char *argv[]) {
@@ -72,4 +72,4 @@ int main(int argc, char *argv[]) {
     // Odłączenie pamięci dzielonej
     shmdt(shared);
     return 0;
-}
+}*/

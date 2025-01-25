@@ -1,7 +1,7 @@
 #include "oprs.h"
 
 int main(int argc, char* argv[]){
-    if (argc != 4) {
+    if (argc != 5) {
         fprintf(stderr, "Błąd: Brak argumentu shmid\n");
         exit(1);
     }
@@ -9,9 +9,16 @@ int main(int argc, char* argv[]){
     int id = atoi(argv[1]);
     int shmid = atoi(argv[2]);
     int semid = atoi(argv[3]);
+    int key = atoi(argv[4]);
 
     printf("Utworzono pasazera %d\n", id);
 
+    int msgid = msgget(key, 0666);
+    if (msgid == -1) {
+        perror("Error accessing message queue");
+        exit(EXIT_FAILURE);
+    }
+    
     //waitsem(semid, 5);
 
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
@@ -25,8 +32,21 @@ int main(int argc, char* argv[]){
     shared->pasazerowie[id] = czeka;
     setsem(semid, 1);
 
+    struct msgbuf msg;
+    setsem(semid, 2);
     while(shared->pasazerowie[id] != poszedl_do_domu){ 
+        //printf("jestem niesmiertelny\n");
         waitsem(semid, 1);
+        /*if (msgrcv(msgid, &msg, sizeof(msg.mtext), 1, IPC_NOWAIT) != -1) {
+            printf("Passenger %d: Received message: %s\n", getpid(), msg.mtext);
+            if (strcmp(msg.mtext, "Koniec rejsow na dzis") == 0) {
+                printf("Passenger %d: Received 'END_OF_DAY', going home\n", getpid());
+                break; // Zakończ pracę
+            }
+        } else if (errno != ENOMSG) {
+            perror("Error receiving message");
+            exit(EXIT_FAILURE);
+        }*/
         switch(shared->pasazerowie[id]){
             case czeka:
                 //printf("Pasazer %d czeka\n", id);
@@ -35,23 +55,25 @@ int main(int argc, char* argv[]){
                 break;
             case na_brzegu:
                 //printf("Pasazer %d jest na brzegu\n", id);
-                printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
+                //printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
                 waitsem(semid, 0);
-                printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
+                //printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
                 wejdz_na_mostek(shared, semid, id); //pasazerowie wchodza na mostek
-                printf("aas");
+                //printf("aas");
                 setsem(semid, 0);
                 setsem(semid, 1);
                 break;
             case na_mostku:
+                waitsem(semid, 0);
                 wejdz_na_statek(shared, semid, id); //pasazerowie wchodza na statek
+                setsem(semid, 0);
                 setsem(semid, 1);
                 break;
             case na_statku:
+                setsem(semid, 1);
                 waitsem(semid, 3); //czekaj na rozkaz opuszczenia mostka
                 setsem(semid, 3);
                 zejdz_na_brzeg(shared, id); //pasazerowie schodza na brzeg i wracaja do domu
-                setsem(semid, 1);
                 break;
         }
     }

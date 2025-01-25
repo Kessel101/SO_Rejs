@@ -31,6 +31,8 @@ int licz_pasazerow(SharedMemory* shared);
 void opuscic_mostek(SharedMemory* shared);
 void zapros_pasazerow(SharedMemory* shared);
 void kaz_pasazerom_czekac(SharedMemory* shared);
+void wyrzuc_pasazerow (SharedMemory* shared);
+
 
 
 

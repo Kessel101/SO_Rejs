@@ -22,9 +22,9 @@
 #define N 15
 #define K 6 
 #define R 3
-#define T1 10
+#define T1 3
 #define T2 5
-#define LICZBA_PASAZEROW 3
+#define LICZBA_PASAZEROW 5
 
 
 

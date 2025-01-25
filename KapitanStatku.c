@@ -35,6 +35,11 @@ int main(int argc, char *argv[]) {
             shared->mostek[i] = -1;
         }
     setsem(semid, 1);
+
+    for (int i = 0; i < LICZBA_PASAZEROW; i++) {
+        waitsem(semid, 2); // Oczekuje na inicjalizację każdego pasażera
+    }
+
     printf("KapitanStatku: Mostek gotowy, czekam na pasażerów.\n\n\n");
     zapros_pasazerow(shared);
 

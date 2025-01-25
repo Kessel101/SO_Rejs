@@ -236,7 +236,6 @@ void wejdz_na_mostek(SharedMemory* shared, int semid, int id) {
 }
 
 void wejdz_na_statek(SharedMemory* shared, int semid, int id) {
-    waitsem(semid, 0);
     if(shared->mostek[0] == id ){
         shared->zaloga[shared->liczba_na_statku] = id;
         printf("Pasazer %d wszedł na statek i zajal %d pozycje\n", id, shared->liczba_na_statku);
@@ -245,7 +244,6 @@ void wejdz_na_statek(SharedMemory* shared, int semid, int id) {
         shared->liczba_na_mostku--;
         shared->pasazerowie[id] = 3;
     }
-    setsem(semid, 0);
 }
 
 void zejdz_na_brzeg(SharedMemory* shared, int id){
@@ -286,5 +284,11 @@ void kaz_pasazerom_czekac(SharedMemory* shared){
         if(shared->pasazerowie[i] == 1){
             shared->pasazerowie[i] = 0;
         }
+    }
+}
+
+void wyrzuc_pasazerow (SharedMemory* shared){
+    for(int i = 0; i < LICZBA_PASAZEROW; i++){
+            shared->pasazerowie[i] = 4;
     }
 }
