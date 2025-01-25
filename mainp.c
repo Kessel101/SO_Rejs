@@ -39,6 +39,8 @@ int main(){
     exit(EXIT_FAILURE);
     }
 
+    
+
     shared->nr_rejsu = 0;
     shared->pid_main = getpid();
     nakaz_odplyniecia_flag = 0;
@@ -55,6 +57,24 @@ int main(){
         semctl(semid, i, SETVAL, 0);
         }
 
+        printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
+        setsem(semid, 0);
+        printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
+        waitsem(semid, 0);
+        printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
+
+
+        for(int i = 0; i < LICZBA_PASAZEROW; i++){ //inicjalizacja pasazerow
+            if(shared->pasazerowie[i] != 4){
+                shared->pasazerowie[i] = -1;
+            }
+        }
+        setsem(semid, 1);
+
+        
+
+        printf("Wszyscy pasazerowie gotowi\n");
+
 
         char id[20] = {};
         char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {};
@@ -62,16 +82,31 @@ int main(){
         sprintf(semid_str, "%d", semid);
         sprintf(key_str, "%d", key);
         for(int i = 0; i < LICZBA_PASAZEROW; i++){
+            
+            printf("Passing int semid: %d to child %i\n", semid, i);
+            printf("Passing str semid: %s to child %i\n", semid_str, i);
             if(fork() == 0){
                 sprintf(id, "%d", i);
-                execl("./pasazerowie", "./pasazerowie", id, shmid_str, semid_str, (char *)NULL);
+                execl("./pasazerowie", "pasazerowie", id, shmid_str, semid_str, (char *)NULL);
                 perror("exec pasazer nie powiódł się");
                 unlink("A");
                 exit(1);
             }
         }
 
-    
+        //oczekiwanie na inicjalizacje pasazerow
+        while(1){
+            int x = 0;
+            for(int i = 0; i < LICZBA_PASAZEROW; i++){
+                if(shared->pasazerowie[i] == 4 || shared->pasazerowie[i] == 0){
+                    x++;
+                }
+            }
+            if(x == LICZBA_PASAZEROW){
+                break;
+            }
+            //printf("itracja\n");
+        }
     
 
     
@@ -99,6 +134,8 @@ int main(){
     }*/
 
     int i = 0;
+    printf("Passing int semid: %d to kapitan \n", semid);
+    printf("Passing str semid: %s to kapitan \n", semid_str);
    execl(processes[i], processes[i], shmid_str, semid_str, key_str, (char *)NULL);
 
 

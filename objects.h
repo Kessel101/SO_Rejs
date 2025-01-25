@@ -17,13 +17,14 @@
 #include <pthread.h>
 #include <time.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #define N 15
 #define K 6 
 #define R 3
-#define T1 5
+#define T1 10
 #define T2 5
-#define LICZBA_PASAZEROW 40
+#define LICZBA_PASAZEROW 3
 
 
 

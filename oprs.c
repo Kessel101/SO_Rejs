@@ -3,21 +3,25 @@
 
 void setsem(int semid, int semnum) {
     struct sembuf op = {semnum, 1, 0};
+    //printf("Process %d: Przed setsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
     if (semop(semid, &op, 1) == -1) {
         perror("Error in semop (setsem)");
         exit(EXIT_FAILURE);
     }
+    //printf("Process %d: Po setsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
 }
 
 void waitsem(int semid, int semnum) {
     struct sembuf op = {semnum, -1, 0};
+    //printf("Process %d: Przed waitsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
     if (semop(semid, &op, 1) == -1) {
         perror("Error in semop (waitsem)");
         exit(EXIT_FAILURE);
     }
+    //printf("Process %d: Po waitsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
 }
 
-void dummy_handler(int sig) {
+/*void dummy_handler(int sig) {
     printf("mainp:Otrzymano sygnał %d, ale nie podejmuję żadnych działań.\n", sig);
 }
 
@@ -85,7 +89,7 @@ void inicjalizuj_dane(SharedMemory *shared) {
             mostek[i] = -1; // Opróżnienie miejsca na moście
         }
     }
-}*/
+}
 int pusty_mostek(int *mostek) {
     if (mostek == NULL) {
         perror("Błąd: wskaźnik mostek jest NULL");
@@ -208,7 +212,7 @@ void przenies_pasazera_na_mostek(int semid, SharedMemory *shared) {
 
         setsem(semid, 5);
     }
-}
+}*/
 
 void przejscie_na_mostku(SharedMemory* shared){ //kierunek 0 - na statek, 1 - na brzeg, PRZEJSCIE DOKONUJE SIE PRZED ZMNIEJSZENIEM LICZBY NA MOSTKU
     for(int i = 1; i < shared->liczba_na_mostku; i++){
@@ -220,14 +224,15 @@ void przejscie_na_mostku(SharedMemory* shared){ //kierunek 0 - na statek, 1 - na
 
 
 void wejdz_na_mostek(SharedMemory* shared, int semid, int id) {
-    waitsem(semid, 0);
-    if((id == 0 || shared->pasazerowie[id - 1] == 4) || (shared->pasazerowie[id - 1] > 0 && shared->liczba_na_mostku < K)){
-        shared->mostek[shared->liczba_na_mostku] = id;
+    if((id == 0 || shared->pasazerowie[id - 1] == 4 || (shared->pasazerowie[id - 1] > 1 && shared->liczba_na_mostku < K) && shared->pasazerowie[id] != 2)){
+        int i = shared->liczba_na_mostku;
         printf("Pasazer %d wszedł na mostek i zajal %d pozycje\n", id, shared->liczba_na_mostku);
+        //waitsem(semid, 1);
+        shared->mostek[shared->liczba_na_mostku] = id;
         shared->liczba_na_mostku++;
-        shared->pasazerowie[id] = 1;
+        shared->pasazerowie[id] = 2;
+        //setsem(semid, 1);
     }
-    setsem(semid, 0);
 }
 
 void wejdz_na_statek(SharedMemory* shared, int semid, int id) {
@@ -238,7 +243,7 @@ void wejdz_na_statek(SharedMemory* shared, int semid, int id) {
         shared->liczba_na_statku++;
         przejscie_na_mostku(shared);
         shared->liczba_na_mostku--;
-        shared->pasazerowie[id] = 2;
+        shared->pasazerowie[id] = 3;
     }
     setsem(semid, 0);
 }
@@ -262,7 +267,7 @@ int licz_pasazerow(SharedMemory* shared){
 void opuscic_mostek(SharedMemory* shared){
     for(int i = 0; i < K; i++){
         if(shared->mostek[i] != -1){
-            shared->pasazerowie[shared->mostek[i]] = 3;
+            shared->pasazerowie[shared->mostek[i]] = 0;
             shared->mostek[i] = -1;
         }
     }

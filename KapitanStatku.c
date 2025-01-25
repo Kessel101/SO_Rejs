@@ -30,21 +30,28 @@ int main(int argc, char *argv[]) {
 
 
     //Koniec przygotowań do wpuszczenia pasażerów
+    waitsem(semid, 1);
+    for(int i = 0; i < K; i++){ //inicjalizacja mostka
+            shared->mostek[i] = -1;
+        }
+    setsem(semid, 1);
     printf("KapitanStatku: Mostek gotowy, czekam na pasażerów.\n\n\n");
     zapros_pasazerow(shared);
 
-    //setsem(semid, 0);
+    
 
     setsem(semid, 0);
+    //setsem(semid, 5);
 
     time_t start_time = time(NULL);
     while(time(NULL) - start_time < T1); //Proces wpuszczania pasazerow
 
     shared->status = 1; //Rozpoczecie przygotowan do wyplyniecia
     
-
+    waitsem(semid, 1);
     kaz_pasazerom_czekac(shared);
     opuscic_mostek(shared);
+    setsem(semid, 1);
 
 
     /*msgsnd(msgid, &opuscic_mostek, sizeof(opuscic_mostek.mtext), 0);
