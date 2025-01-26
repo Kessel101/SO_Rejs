@@ -1,11 +1,32 @@
 #include "oprs.h"
 
 
+
+void handle_signal1(int sig) {
+    natychmiastowe_wyplyniecie = 1;
+    printf("[HANDLER] Otrzymano signal 1 (natychmiastowe wypłynięcie). Flaga ustawiona na 1.\n");
+}
+
+// Handler dla signal 2
+void handle_signal2(int sig) {
+    przerwanie_rejsow = 1;
+    printf("[HANDLER] Otrzymano signal 2 (przerwanie rejsów). Flaga ustawiona na 1.\n");
+}
+
     
 int main(int argc, char *argv[]) {
     if (argc != 4) {
         fprintf(stderr, "Błąd: Brak argumentu shmid\n");
         exit(1);
+    }
+
+    if (signal(SIGUSR1, handle_signal1) == SIG_ERR) {
+        perror("Nie udało się ustawić handlera dla SIGUSR1");
+        exit(EXIT_FAILURE);
+    }
+    if (signal(SIGUSR2, handle_signal2) == SIG_ERR) {
+        perror("Nie udało się ustawić handlera dla SIGUSR2");
+        exit(EXIT_FAILURE);
     }
 
 
@@ -22,13 +43,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
     }
 
-
-    /*struct msgbuf opuscic_mostek;
-    int msgid = msgget(key, IPC_CREAT|0666);
-    strcpy(opuscic_mostek.mtext, "Opuscic mostek!");
-    opuscic_mostek.mtype = 1;*/
-
-
+    //dosc tego programu
     //Koniec przygotowań do wpuszczenia pasażerów
     waitsem(semid, 1);
     for(int i = 0; i < K; i++){ //inicjalizacja mostka
@@ -52,7 +67,10 @@ int main(int argc, char *argv[]) {
     //setsem(semid, 5);
 
     time_t start_time = time(NULL);
-    while(time(NULL) - start_time < T1); //Proces wpuszczania pasazerow
+    while(time(NULL) - start_time < T1 || natychmiastowe_wyplyniecie); //Proces wpuszczania pasazerow
+    if(natychmiastowe_wyplyniecie == 1){
+        natychmiastowe_wyplyniecie = 0;
+    }
 
     shared->status = 1; //Rozpoczecie przygotowan do wyplyniecia
     
@@ -61,25 +79,6 @@ int main(int argc, char *argv[]) {
     opuscic_mostek(shared);
     setsem(semid, 1);
 
-
-    /*msgsnd(msgid, &opuscic_mostek, sizeof(opuscic_mostek.mtext), 0);
-    printf("Wyslano\n");
-    setsem(semid, 2);
-    struct msgbuf odp;
-
-    waitsem(semid, 3);
-    if (msgrcv(msgid, &odp, sizeof(odp.mtext), 2, 0) == -1) {
-        perror("msgrcv");
-        exit(EXIT_FAILURE);
-    }
-    
-    if(nakaz_przerwania_rejsow_flag == 1){
-        setsem(semid, 5);
-        przenies_pasazera_na_mostek(semid, shared);
-        shared->status = 5;
-        shmdt(shared);
-        return 0;
-    }*/
     printf(KAPITAN_STATKU "\n\nKapitan Statku: Odplywamy!\n\n");
     shared->status = 2;
 

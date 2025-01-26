@@ -17,14 +17,16 @@
 #include <pthread.h>
 #include <time.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #define N 15
 #define K 6 
 #define R 3
-#define T1 3
-#define T2 5
-#define LICZBA_PASAZEROW 20
+#define T1 30
+#define T2 50
+#define LICZBA_PASAZEROW 35
+#define FIFO_PATH "/tmp/port_fifo"
 
 #define PASAZER "\033[33m"
 #define KAPITAN_STATKU "\033[34m"
@@ -35,8 +37,8 @@
 
 
 // Flagi sygnałów
-int nakaz_odplyniecia_flag;
-int nakaz_przerwania_rejsow_flag;
+volatile sig_atomic_t natychmiastowe_wyplyniecie; // Flaga dla signal 1
+volatile sig_atomic_t przerwanie_rejsow;          // Flaga dla signal 2
 
 
 #define MSG_SIZE 128

@@ -1,47 +1,61 @@
-#include "oprs.h"
+#include "objects.h"
 
-pid_t pid_statku, pid_main;
+pid_t pidKapitanStatku;
 
-// Funkcja obsługi sygnału CTRL+
-void handle_ctrl_quit(int sig) {
-    // Wysyłamy sygnał do Kapitana Statku
-    printf("KapitanPortu: Wysyłam sygnał do KapitanStatku (CTRL+\\).\n");
-    nakaz_odplyniecia_flag = 1;  // Zmieniamy flagę
+void signal1() {
+    kill(pidKapitanStatku, SIGUSR1);
+    printf("Wyslalem sygnal 1 (natychmiastowe wyplyniecie)\n");
 }
 
-// Funkcja obsługi sygnału CTRL+D
-void handle_ctrl_d(int sig) {
-    // Wysyłamy sygnał do Main
-    printf("KapitanPortu: Wysyłam sygnał do Main (CTRL+D).\n");
-    nakaz_przerwania_rejsow_flag = 1;  // Zmieniamy flagę
+void signal2() {
+    kill(pidKapitanStatku, SIGUSR2);
+    printf("Wyslano 'signal2' (zakonczenie dnia) do kapitan_statku");
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Użycie: %s <pid_kapitana_statku> <pid_main>\n", argv[0]);
+int main() {
+
+printf("Oczekiwanie na pid kapitana statku przez FIFO\n");
+    
+    // Otwieranie FIFO do odczytu
+    int fifo_fd = open(FIFO_PATH, O_RDONLY);
+    if (fifo_fd == -1) {
+        perror("Blad otwierania kolejki FIFO");
+        unlink(FIFO_PATH);
         exit(EXIT_FAILURE);
     }
-
-    // Pobranie PID-ów z argumentów
-    int shmid = atoi(argv[1]);
-    int semid = atoi(argv[2]);
-    //rownosc swiata wolnosc ład
-
-
-    // Podłączenie pamięci współdzielonej
-    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
-    if (shared == NULL) {
-        perror("Błąd przy dołączaniu pamięci współdzielonej");
+    
+    // Odczytanie PID kapitana statku z FIFO
+    if (read(fifo_fd, &pidKapitanStatku, sizeof(pidKapitanStatku)) <= 0) {
+        perror("Blad odczytu pidKapitanStatku");
+        close(fifo_fd);
+        unlink(FIFO_PATH);
         exit(EXIT_FAILURE);
     }
+    
+    printf("Otrzymano pid kapitana statku: %d\n", pidKapitanStatku);
+    
+    // Zamknięcie FIFO do odczytu
+    close(fifo_fd);
 
-    // Przypisanie obsługi sygnałów
-    signal(SIGQUIT, handle_ctrl_quit);  // CTRL + \\ -> SIGQUIT
-    signal(SIGINT, handle_ctrl_d);      // CTRL + D -> SIGINT
+    // Pętla obsługująca komendy od użytkownika
+    while (1) {
+        char command[10];
+        printf("Podaj komende (signal1, signal2, exit):");
+        scanf("%s", command);
 
-    while(shared->status < 4){
-        sleep(1);
+        if (strcmp(command, "signal1") == 0) {
+            signal1(); // Wysłanie SIGUSR1
+        } else if (strcmp(command, "signal2") == 0) {
+            signal2(); // Wysłanie SIGUSR2
+        } else if (strcmp(command, "exit") == 0) {
+            printf("Zamykanie programu\n");
+            break;
+        } else {
+            printf("Nieznana komenda: %s\n", command);
+        }
     }
-
+    
+    // Usuwanie kolejki FIFO
+    unlink(FIFO_PATH);
     return 0;
 }
