@@ -39,6 +39,7 @@
 // Flagi sygnałów
 volatile sig_atomic_t natychmiastowe_wyplyniecie; // Flaga dla signal 1
 volatile sig_atomic_t przerwanie_rejsow;          // Flaga dla signal 2
+int nakaz;
 
 
 #define MSG_SIZE 128
@@ -58,6 +59,7 @@ typedef struct shared {
     int liczba_na_mostku; 
     int liczba_na_statku; 
     int liczba_przewiezionych;
+    int nakaz_odplyniecia;
 } SharedMemory;
 
 #endif

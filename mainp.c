@@ -109,15 +109,15 @@ int main(){
         }
     setsem(semid, 5);
     przerwanie_rejsow = 0;
+    natychmiastowe_wyplyniecie = 1;
+    printf("Natychniastowe wyplyniecie: %d\n", natychmiastowe_wyplyniecie);
     natychmiastowe_wyplyniecie = 0;
+    printf("Natychniastowe wyplyniecie: %d\n", natychmiastowe_wyplyniecie);
+    nakaz = 1;
+    printf("nakaz: %d\n", nakaz);
 
 
     while(shared->nr_rejsu < R && przerwanie_rejsow == 0){
-
-
-
-
-
 
 
         if(shared->liczba_przewiezionych == LICZBA_PASAZEROW){
@@ -141,7 +141,7 @@ int main(){
         int i = 0;
 
         if (fork() == 0) {
-            execl("./kapitanportu", "kapitanportu", (char *)NULL);
+            execl("./kapitanportu", "kapitanportu", shmid_str, (char *)NULL);
             perror("Nie udało się uruchomić kapitana portu");
             exit(1);
         }
@@ -153,13 +153,20 @@ int main(){
             waitpid(pid, NULL, 0);
         }
         else{
+            printf("przed fifo_fd\n");
             int fifo_fd = open(FIFO_PATH, O_WRONLY);
             if (fifo_fd == -1) {
                 perror("Nie udało się otworzyć kolejki FIFO");
                 exit(1);
             }
-
+            printf("przed write\n");
             // Przekierowanie stdout do FIFO
+            int stdout_copy = dup(STDOUT_FILENO);
+            if (stdout_copy == -1) {
+                perror("Nie udało się utworzyć kopii stdout");
+                close(fifo_fd);
+                exit(1);
+            }
             if (dup2(fifo_fd, STDOUT_FILENO) == -1) {
                 perror("Nie udało się przekierować stdout do FIFO");
                 close(fifo_fd);
@@ -167,7 +174,12 @@ int main(){
             }
             printf(KAPITAN_STATKU "Wyslano pid kapitana statku: %d\n", getpid());
             close(fifo_fd); // Zamykamy deskryptor, bo został skopiowany do stdout
-
+            if (dup2(stdout_copy, STDOUT_FILENO) == -1) {
+                perror("Nie udało się przywrócić stdout");
+                close(stdout_copy);
+                exit(1);
+            }
+            printf("otwieram kapitana statku\n");
             // Wywołanie programu
             execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char *)NULL);
 

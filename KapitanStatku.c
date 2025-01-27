@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 700
 #include "oprs.h"
 
 
@@ -20,14 +21,23 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if (signal(SIGUSR1, handle_signal1) == SIG_ERR) {
-        perror("Nie udało się ustawić handlera dla SIGUSR1");
+    struct sigaction sa;
+    sa.sa_handler = handle_signal1;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+        perror("sigaction");
         exit(EXIT_FAILURE);
     }
-    if (signal(SIGUSR2, handle_signal2) == SIG_ERR) {
-        perror("Nie udało się ustawić handlera dla SIGUSR2");
+
+
+
+    sa.sa_handler = handle_signal2;
+    if (sigaction(SIGUSR2, &sa, NULL) == -1) {
+        perror("sigaction");
         exit(EXIT_FAILURE);
     }
+
 
 
     // Odbiór shmid z argumentów
@@ -43,6 +53,9 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
     }
 
+   
+    
+
     //dosc tego programu
     //Koniec przygotowań do wpuszczenia pasażerów
     waitsem(semid, 1);
@@ -50,6 +63,7 @@ int main(int argc, char *argv[]) {
             shared->mostek[i] = -1;
         }
     setsem(semid, 1);
+
 
     if(shared->nr_rejsu == 0){
         for (int i = 0; i < LICZBA_PASAZEROW; i++) {
@@ -67,7 +81,13 @@ int main(int argc, char *argv[]) {
     //setsem(semid, 5);
 
     time_t start_time = time(NULL);
-    while(time(NULL) - start_time < T1 || natychmiastowe_wyplyniecie); //Proces wpuszczania pasazerow
+    printf("przed loopem\n");
+    while(time(NULL) - start_time < T1 && shared->nakaz_odplyniecia == 0){
+        printf("cos\n");
+        sleep(4);
+        printf("natychmiastowe_wyplyniecie: %d\n", natychmiastowe_wyplyniecie);
+        printf("nakaz: %d\n", nakaz);
+    }; //Proces wpuszczania pasazerow
     if(natychmiastowe_wyplyniecie == 1){
         natychmiastowe_wyplyniecie = 0;
     }
