@@ -23,8 +23,8 @@
 #define N 15
 #define K 6 
 #define R 3
-#define T1 30
-#define T2 50
+#define T1 3
+#define T2 1
 #define LICZBA_PASAZEROW 35
 #define FIFO_PATH "/tmp/port_fifo"
 

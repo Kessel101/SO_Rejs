@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
 
     //dosc tego programu
     //Koniec przygotowań do wpuszczenia pasażerów
+    printf("tutaj\n");
     waitsem(semid, 1);
     for(int i = 0; i < K; i++){ //inicjalizacja mostka
             shared->mostek[i] = -1;

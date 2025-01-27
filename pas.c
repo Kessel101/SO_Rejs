@@ -11,18 +11,9 @@ int main(int argc, char* argv[]){
     int semid = atoi(argv[3]);
     int key = atoi(argv[4]);
 
-    waitsem(semid, 5);
-    setsem(semid, 5);
 
     printf(PASAZER "Utworzono pasazera %d\n", id);
 
-    /*int msgid = msgget(key, 0666);
-    if (msgid == -1) {
-        perror("Error accessing message queue");
-        exit(EXIT_FAILURE);
-    }*/
-    
-    //waitsem(semid, 5);
 
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
     if (shared == (SharedMemory *)-1) {
@@ -38,26 +29,10 @@ int main(int argc, char* argv[]){
     //struct msgbuf msg;
     setsem(semid, 2);
     while(shared->pasazerowie[id] != poszedl_do_domu){ 
-        //printf("jestem niesmiertelny\n");
-        //waitsem(semid, 1);
-        /*if (msgrcv(msgid, &msg, sizeof(msg.mtext), 1, IPC_NOWAIT) != -1) {
-            printf("Passenger %d: Received message: %s\n", getpid(), msg.mtext);
-            if (strcmp(msg.mtext, "Koniec rejsow na dzis") == 0) {
-                printf("Passenger %d: Received 'END_OF_DAY', going home\n", getpid());
-                break; // Zakończ pracę
-            }
-        } else if (errno != ENOMSG) {
-            perror("Error receiving message");
-            exit(EXIT_FAILURE);
-        }*/
         switch(shared->pasazerowie[id]){
             case czeka:
-                //printf("Pasazer %d czeka\n", id);
-                //usleep(500); //czekaj na rozkazy kapitana
                 break;
             case na_brzegu:
-                //printf("Pasazer %d jest na brzegu\n", id);
-                //printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
                 waitsem(semid, 0);
                 //printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
                 wejdz_na_mostek(shared, semid, id); //pasazerowie wchodza na mostek

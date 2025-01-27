@@ -1,6 +1,16 @@
 #include "oprs.h"
 
 
+void main_finish(SharedMemory* shared, int shmid, int semid){
+    shmdt(shared);
+        for(int i = 0; i < 6; i++){ //usuwanie semaforów
+        semctl(semid, i, IPC_RMID);
+        }
+        shmctl(shmid, IPC_RMID, NULL);
+        unlink(FIFO_PATH);
+        unlink("A");
+}
+
 
 int main(){
     FILE *temp_file = fopen("A", "w");
@@ -17,15 +27,23 @@ int main(){
     exit(EXIT_FAILURE);
     }
 
-    /*int msgid = msgget(key, IPC_CREAT | 0666);
-    if (msgid == -1) {
-        perror("Error creating message queue");
-        exit(EXIT_FAILURE);
-    }*/
+    int shmid = shmget(key, sizeof(SharedMemory), 0666 | IPC_CREAT); // Tworzenie segmentu pamięci dzielonej
+    if (shmid == -1) {
+    perror("Error in shmget");
+    unlink("A");
+    exit(EXIT_FAILURE);
+    }
 
-   struct stat st;
+    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0); // Podłączenie pamięci dzielonej
+    if (shared == (SharedMemory *)-1) {
+    perror("Error in shmat");
+    unlink("A");
+    exit(EXIT_FAILURE);
+    }
+
 
     // Sprawdzenie, czy kolejka FIFO istnieje
+    struct stat st;
     if (stat(FIFO_PATH, &st) == 0) {
         // Jeśli plik istnieje, usuwamy go
         if (unlink(FIFO_PATH) == 0) {
@@ -39,17 +57,7 @@ int main(){
         perror("Blad tworzenia kolejki FIFO");
         exit(EXIT_FAILURE);
     }
-
-
-    int shmid = shmget(key, sizeof(SharedMemory), 0666 | IPC_CREAT); // Tworzenie segmentu pamięci dzielonej
-    if (shmid == -1) {
-    perror("Error in shmget");
-    unlink("A");
-    exit(EXIT_FAILURE);
-    }
-
     
-
     int semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
     if (semid == -1) {
     perror("Error in semget");
@@ -59,11 +67,8 @@ int main(){
 
     for (int i = 0; i < 6; i++) {
         if (semctl(semid, i, GETVAL) != -1 || errno != EINVAL) { // Sprawdzanie istnienia semafora
-            //printf("Semaphore %d exists in set %d. Attempting to remove the set.\n", i, semid);
             if (semctl(semid, 0, IPC_RMID) == -1) {
                 perror("Error removing semaphore set");
-            } else {
-                //printf("Semaphore set %d removed successfully.\n", semid);
             }
             break; // Usunięcie zestawu kończy pętlę
         } else if (errno == EINVAL) {
@@ -78,43 +83,35 @@ int main(){
     exit(EXIT_FAILURE);
     }
 
-    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0); // Podłączenie pamięci dzielonej
-    if (shared == (SharedMemory *)-1) {
-    perror("Error in shmat");
-    unlink("A");
-    exit(EXIT_FAILURE);
-    }
-
     semctl(semid, 5, SETVAL, 0);
+
+    
+    char id[20] = {};
+    char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {};
+    sprintf(shmid_str, "%d", shmid);
+    sprintf(semid_str, "%d", semid);
+    sprintf(key_str, "%d", key);
+
+    for(int i = 0; i < LICZBA_PASAZEROW; i++){
+        if(fork() == 0){
+            sprintf(id, "%d", i);
+            execl("./pasazerowie", "pasazerowie", id, shmid_str, semid_str, key_str, (char *)NULL);
+            perror("exec pasazer nie powiódł się");
+            unlink("A");
+            exit(1);
+        }
+    }
+    setsem(semid, 5);
+    przerwanie_rejsow = 0;
+    natychmiastowe_wyplyniecie = 0;
+
 
     shared->nr_rejsu = 0;
     shared->liczba_przewiezionych = 0;
+    shared->liczba_na_mostku = 0;
+    shared->liczba_na_statku = 0;
+    shared->liczba_przewiezionych = 0;
 
-
-
-    char id[20] = {};
-        char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {};
-        sprintf(shmid_str, "%d", shmid);
-        sprintf(semid_str, "%d", semid);
-        sprintf(key_str, "%d", key);
-        for(int i = 0; i < LICZBA_PASAZEROW; i++){
-            
-            if(fork() == 0){
-                sprintf(id, "%d", i);
-                execl("./pasazerowie", "pasazerowie", id, shmid_str, semid_str, key_str, (char *)NULL);
-                perror("exec pasazer nie powiódł się");
-                unlink("A");
-                exit(1);
-            }
-        }
-    setsem(semid, 5);
-    przerwanie_rejsow = 0;
-    natychmiastowe_wyplyniecie = 1;
-    printf("Natychniastowe wyplyniecie: %d\n", natychmiastowe_wyplyniecie);
-    natychmiastowe_wyplyniecie = 0;
-    printf("Natychniastowe wyplyniecie: %d\n", natychmiastowe_wyplyniecie);
-    nakaz = 1;
-    printf("nakaz: %d\n", nakaz);
 
 
     while(shared->nr_rejsu < R && przerwanie_rejsow == 0){
@@ -138,28 +135,29 @@ int main(){
         
     
 
-        int i = 0;
+        int pid = fork();
 
-        if (fork() == 0) {
-            execl("./kapitanportu", "kapitanportu", shmid_str, (char *)NULL);
+        if (pid == 0) {
+            execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char *)NULL);
             perror("Nie udało się uruchomić kapitana portu");
             exit(1);
         }
+        else{
+            waitpid(pid, NULL, 0);
+        }
 
 
-        int pid = fork();
+        /*int pid = fork();
         if( pid != 0){
             
             waitpid(pid, NULL, 0);
         }
         else{
-            printf("przed fifo_fd\n");
             int fifo_fd = open(FIFO_PATH, O_WRONLY);
             if (fifo_fd == -1) {
                 perror("Nie udało się otworzyć kolejki FIFO");
                 exit(1);
             }
-            printf("przed write\n");
             // Przekierowanie stdout do FIFO
             int stdout_copy = dup(STDOUT_FILENO);
             if (stdout_copy == -1) {
@@ -179,7 +177,6 @@ int main(){
                 close(stdout_copy);
                 exit(1);
             }
-            printf("otwieram kapitana statku\n");
             // Wywołanie programu
             execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char *)NULL);
 
@@ -188,9 +185,9 @@ int main(){
             unlink("A");
             exit(1);
         }
-        
+        */
 
-        
+        printf("tu\n");
 
         if(shared->status == 4){
             printf(MAINP "\n\nRejs %d zakończony\n\n", shared->nr_rejsu);
@@ -204,17 +201,6 @@ int main(){
         
 
     }
-
-        /*struct msgbuf msg;
-        msg.mtype = 1;
-        strcpy(msg.mtext, "Koniec rejsow na dzis");
-
-        for (int i = 0; i < LICZBA_PASAZEROW; i++) {
-            if (msgsnd(msgid, &msg, sizeof(msg.mtext), 0) == -1) {
-                perror("Error sending message");
-            }
-        }
-        printf("Message sent: %s\n", msg.mtext);*/
 
         wyrzuc_pasazerow(shared);
 
