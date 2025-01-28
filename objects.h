@@ -21,10 +21,10 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define N 35 //liczba miejsc na statku
+#define N 15 //liczba miejsc na statku
 #define K 6 //liczba miejsc na mostku
 #define R 3 //liczba rejsów w ciągu dnia
-#define T1 3 //czas na załadunek
+#define T1 8 //czas na załadunek
 #define T2 1 //czas rejsu 
 #define LICZBA_PASAZEROW 30 //liczba pasażerów danego dnia
 #define FIFO_PATH "/tmp/port_fifo" 
@@ -38,11 +38,6 @@
 
 
 
-
-// Flagi sygnałów
-volatile sig_atomic_t natychmiastowe_wyplyniecie; // Flaga dla signal 1
-volatile sig_atomic_t przerwanie_rejsow;          // Flaga dla signal 2
-int nakaz;
 
 
 //pamięć dzielona

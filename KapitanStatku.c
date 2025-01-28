@@ -1,16 +1,25 @@
 #define _XOPEN_SOURCE 700
 #include "oprs.h"
 
+volatile sig_atomic_t nakaz;
 
-
+SharedMemory *shared;
 void handle_signal1(int sig) {
-    natychmiastowe_wyplyniecie = 1;
+    shared->nakaz_odplyniecia = 1;
     printf("[HANDLER] Otrzymano signal 1 (natychmiastowe wypłynięcie). Flaga ustawiona na 1.\n");
 }
 
 // Handler dla signal 2
 void handle_signal2(int sig) {
-    przerwanie_rejsow = 1;
+    shared->przerwanie_rejsow = 1;
+    if(shared->status < 2){
+        kaz_pasazerom_czekac(shared);
+        opuscic_mostek(shared);
+        wyrzuc_pasazerow(shared);
+        shmdt(shared);
+        exit(1);
+    }
+    shared->status = 5;
     printf("[HANDLER] Otrzymano signal 2 (przerwanie rejsów). Flaga ustawiona na 1.\n");
 }
 
@@ -47,7 +56,7 @@ int main(int argc, char *argv[]) {
 
 
     //inicjalizacja pamięci dzielonej
-    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
+    shared = (SharedMemory *)shmat(shmid, NULL, 0);
     if (shared == (SharedMemory *)-1) {
     perror("Błąd przy dołączaniu pamięci dzielonej");
     exit(EXIT_FAILURE);
@@ -104,12 +113,12 @@ int main(int argc, char *argv[]) {
     setsem(semid, 0);
 
     time_t start_time = time(NULL);
-    printf("przed loopem\n");
     while(time(NULL) - start_time < T1 && shared->nakaz_odplyniecia == 0){
         sleep(1);
     }; //Proces wpuszczania pasazerow
     if(shared->nakaz_odplyniecia == 1){
         shared->nakaz_odplyniecia = 0;
+        printf(KAPITAN_STATKU "\nODPLYWAMY WCZESNIEJ\n");
     }
 
     shared->status = 1; //Rozpoczecie przygotowan do wyplyniecia
@@ -125,8 +134,11 @@ int main(int argc, char *argv[]) {
     //Rejs trwa
     sleep(T2);
 
+
     printf(KAPITAN_STATKU "\n\nKapitan Statku: Powracamy\n\n\n");
-    shared->status = 3; //Rozladowanie po rejsie
+    if(shared->status != 5) {
+        shared->status = 3; //Rozladowanie po rejsie
+    }
 
     shared->liczba_przewiezionych += shared->liczba_na_statku;
 
@@ -135,20 +147,20 @@ int main(int argc, char *argv[]) {
         sleep(1);
     }
 
-    shared->status = 4; //koniec rejsu
-
-    if(shared->status == 4){
-            printf(MAINP "\n\nRejs %d zakończony\n\n", shared->nr_rejsu);
-            shared->nr_rejsu++;
-        }
-        else{
-            printf(MAINP "\n\nRejs %d przerwany\n\n", shared->nr_rejsu);
-            break;
-        }
-
+    if(shared->status != 5) {
+        shared->status = 4; 
+        printf(MAINP "\n\nRejs %d zakończony\n\n", shared->nr_rejsu);
+        shared->nr_rejsu++;
     }
+    else{
+        printf(MAINP "\n\nRejs %d przerwany\n\n", shared->nr_rejsu);
+        break;
+    }
+    }
+
     // Odłączenie pamięci dzielonej
     shmdt(shared);
     return 0;
+    
     
 }

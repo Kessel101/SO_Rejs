@@ -51,10 +51,10 @@ int main(int argc, char *argv[]) {
 
         if (strcmp(command, "signal1") == 0) {
             signal1(); // Wysłanie SIGUSR1
-            shared->nakaz_odplyniecia = 1;
+            //shared->nakaz_odplyniecia = 1;
         } else if (strcmp(command, "signal2") == 0) {
             signal2(); // Wysłanie SIGUSR2
-            shared->przerwanie_rejsow = 1;
+            //shared->przerwanie_rejsow = 1;
         } else if (strcmp(command, "exit") == 0) {
             printf(KAPITAN_PORTU "Zamykanie programu\n");
             break;

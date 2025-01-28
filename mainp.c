@@ -128,10 +128,6 @@ int main(){
         }
     }
 
-
-
-
-
     pid_t pid_statku_kapitan = fork();
     switch (pid_statku_kapitan)
     {
