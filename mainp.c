@@ -23,8 +23,6 @@ void sprawdz_dane() {
 
 
 
-
-
 int main(){
 
     sprawdz_dane();
@@ -100,8 +98,19 @@ int main(){
     exit(EXIT_FAILURE);
     }
 
-    semctl(semid, 5, SETVAL, 0);
+    for(int i = 0; i < 6; i++){ //inicjalizacja semaforów
+        semctl(semid, i, SETVAL, 0);
+        }
 
+
+
+    shared->nr_rejsu = 0;
+    shared->status = 0;
+    shared->liczba_na_mostku = 0;
+    shared->liczba_na_statku = 0;
+    shared->liczba_przewiezionych = 0;
+    shared->nakaz_odplyniecia = 0;
+    shared->przerwanie_rejsow = 0;
     
     char id[20] = {};
     char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {};
@@ -118,76 +127,63 @@ int main(){
             exit(1);
         }
     }
-    setsem(semid, 5);
-    przerwanie_rejsow = 0;
-    natychmiastowe_wyplyniecie = 0;
-
-
-    shared->nr_rejsu = 0;
-    shared->liczba_przewiezionych = 0;
-    shared->liczba_na_mostku = 0;
-    shared->liczba_na_statku = 0;
-    shared->liczba_przewiezionych = 0;
 
 
 
-    while(shared->nr_rejsu < R && przerwanie_rejsow == 0){
 
 
-        if(shared->liczba_przewiezionych == LICZBA_PASAZEROW){
-            printf(MAINP "\n\nWszyscy pasażerowie przewiezieni\n\n");
+    pid_t pid_statku_kapitan = fork();
+    switch (pid_statku_kapitan)
+    {
+    case -1:
+        perror("Blad podczas tworzenia pid_statku_kapitan");
+        exit(1);
+        break;
+    case 0:
+        printf("Tworze kapitana\n");
+        execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char *)NULL);
+        perror("exec nie powiódł się");
+        unlink("A");
+        exit(1);
+    default:
             break;
-        }
-        printf(MAINP "Rozpoczynam rejs %d\n\n\n", shared->nr_rejsu);
+    }
 
-        shared->liczba_na_mostku = 0;
-        shared->liczba_na_statku = 0;
-        shared->status = 0;
+    char pid_str[20] = {};
+    sprintf(pid_str, "%d", pid_statku_kapitan);
 
-        for(int i = 0; i < 5; i++){ //inicjalizacja semaforów
-        semctl(semid, i, SETVAL, 0);
-        }
+    switch(fork()){
+        case -1:
+        perror("Błąd przy fork() kapitan portu");
+            exit(1);
+        case 0:
+            execl("./kapitanportu", "./kapitanportu", shmid_str, pid_str, (char *)NULL);
+            perror("Nie udało się uruchomić kapitana portu");
+            exit(1);
+        default:
+        while (wait(NULL) > 0);
+    }
 
-        setsem(semid, 1);
+
+
+    //setsem(semid, 1);
+
         
-
-        if (fork( )== 0) {
+        /*if (fork( )== 0) {
             execl("./kapitanportu", "./kapitanportu", shmid_str, (char *)NULL);
             perror("Nie udało się uruchomić kapitana portu");
             exit(1);
         }
+        
 
 
         int pid = fork();
-        if( pid == 0){
+        if( pid != 0){
             
-            waitpid(pid, NULL, 0);
+            //waitpid(pid, NULL, 0);
         }
         else{
-            int fifo_fd = open(FIFO_PATH, O_WRONLY);
-            if (fifo_fd == -1) {
-                perror("Nie udało się otworzyć kolejki FIFO");
-                exit(1);
-            }
-            // Przekierowanie stdout do FIFO
-            int stdout_copy = dup(STDOUT_FILENO);
-            if (stdout_copy == -1) {
-                perror("Nie udało się utworzyć kopii stdout");
-                close(fifo_fd);
-                exit(1);
-            }
-            if (dup2(fifo_fd, STDOUT_FILENO) == -1) {
-                perror("Nie udało się przekierować stdout do FIFO");
-                close(fifo_fd);
-                exit(1);
-            }
-            printf(KAPITAN_STATKU "Wyslano pid kapitana statku: %d\n", getpid());
-            close(fifo_fd); // Zamykamy deskryptor, bo został skopiowany do stdout
-            if (dup2(stdout_copy, STDOUT_FILENO) == -1) {
-                perror("Nie udało się przywrócić stdout");
-                close(stdout_copy);
-                exit(1);
-            }
+            
             // Wywołanie programu
             execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char *)NULL);
 
@@ -195,32 +191,25 @@ int main(){
             perror("exec nie powiódł się");
             unlink("A");
             exit(1);
-        }
+        }*/
         
 
+        
+        
         printf("tu\n");
 
-        if(shared->status == 4){
-            printf(MAINP "\n\nRejs %d zakończony\n\n", shared->nr_rejsu);
-            shared->nr_rejsu++;
-        }
-        else{
-            printf(MAINP "\n\nRejs %d przerwany\n\n", shared->nr_rejsu);
-            break;
-        }
+        
 
         
 
-    }
+    
 
         wyrzuc_pasazerow(shared);
 
-            
-
-        while (wait(NULL) > 0){}
+        
 
 
-        printf("\n\nKoniec rejsow na dzis! Statystyki:\n-liczba resjow: %d\n-liczba przewiezionych pasazerow: %d\n-odprawionych pasazerow: %d", shared->nr_rejsu, shared->liczba_przewiezionych, LICZBA_PASAZEROW - shared->liczba_przewiezionych);
+        printf(MAINP "\n\nKoniec rejsow na dzis! Statystyki:\n-liczba resjow: %d\n-liczba przewiezionych pasazerow: %d\n-odprawionych pasazerow: %d", shared->nr_rejsu, shared->liczba_przewiezionych, LICZBA_PASAZEROW - shared->liczba_przewiezionych);
         printf("\n\n\n");
         // Usuwanie pamięci dzielonej
         shmdt(shared);

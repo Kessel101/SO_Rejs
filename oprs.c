@@ -3,7 +3,7 @@
 
 void setsem(int semid, int semnum) {
     struct sembuf op = {semnum, 1, 0};
-    //printf("Process %d: Przed setsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
+    printf("Process %d: Przed setsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
     if (semop(semid, &op, 1) == -1) {
         perror("Error in semop (setsem)");
         exit(EXIT_FAILURE);
@@ -13,7 +13,7 @@ void setsem(int semid, int semnum) {
 
 void waitsem(int semid, int semnum) {
     struct sembuf op = {semnum, -1, 0};
-    //printf("Process %d: Przed waitsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
+    printf("Process %d: Przed waitsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
     if (semop(semid, &op, 1) == -1) {
         perror("Error in semop (waitsem)");
         exit(EXIT_FAILURE);

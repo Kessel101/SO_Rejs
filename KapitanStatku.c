@@ -56,14 +56,13 @@ int main(int argc, char *argv[]) {
    
     
 
-    //dosc tego programu
     //Koniec przygotowań do wpuszczenia pasażerów
     printf("tutaj\n");
-    waitsem(semid, 1);
+    //waitsem(semid, 1);
     for(int i = 0; i < K; i++){ //inicjalizacja mostka
             shared->mostek[i] = -1;
         }
-    setsem(semid, 1);
+    //setsem(semid, 1);
 
 
     if(shared->nr_rejsu == 0){
@@ -71,7 +70,31 @@ int main(int argc, char *argv[]) {
             waitsem(semid, 2); // Oczekuje na inicjalizację każdego pasażera
         }
     }
+
+
+
     
+
+    while(shared->nr_rejsu < R && shared->przerwanie_rejsow == 0){
+
+
+        if(shared->liczba_przewiezionych == LICZBA_PASAZEROW){
+            printf(MAINP "\n\nWszyscy pasażerowie przewiezieni\n\n");
+            break;
+        }
+        shared ->status = 0;
+        shared->liczba_na_mostku = 0;
+
+        printf(MAINP "Rozpoczynam rejs %d\n\n\n", shared->nr_rejsu);
+
+
+        for(int i = 0; i < 6; i++){ //inicjalizacja semaforów
+        semctl(semid, i, SETVAL, 0);
+        }
+
+        //setsem(semid, 1);
+
+
 
     printf(KAPITAN_STATKU "\n\nKapitanStatku: Mostek gotowy, czekam na pasażerów.\n\n\n");
     zapros_pasazerow(shared);
@@ -79,32 +102,28 @@ int main(int argc, char *argv[]) {
     
 
     setsem(semid, 0);
-    //setsem(semid, 5);
 
     time_t start_time = time(NULL);
     printf("przed loopem\n");
     while(time(NULL) - start_time < T1 && shared->nakaz_odplyniecia == 0){
-        printf("cos\n");
-        sleep(4);
-        printf("natychmiastowe_wyplyniecie: %d\n", natychmiastowe_wyplyniecie);
-        printf("nakaz: %d\n", nakaz);
+        sleep(1);
     }; //Proces wpuszczania pasazerow
-    if(natychmiastowe_wyplyniecie == 1){
-        natychmiastowe_wyplyniecie = 0;
+    if(shared->nakaz_odplyniecia == 1){
+        shared->nakaz_odplyniecia = 0;
     }
 
     shared->status = 1; //Rozpoczecie przygotowan do wyplyniecia
     
-    waitsem(semid, 1);
+    //waitsem(semid, 1);
     kaz_pasazerom_czekac(shared);
     opuscic_mostek(shared);
-    setsem(semid, 1);
+    //setsem(semid, 1);
 
     printf(KAPITAN_STATKU "\n\nKapitan Statku: Odplywamy!\n\n");
     shared->status = 2;
 
     //Rejs trwa
-    sleep(1);
+    sleep(T2);
 
     printf(KAPITAN_STATKU "\n\nKapitan Statku: Powracamy\n\n\n");
     shared->status = 3; //Rozladowanie po rejsie
@@ -118,6 +137,16 @@ int main(int argc, char *argv[]) {
 
     shared->status = 4; //koniec rejsu
 
+    if(shared->status == 4){
+            printf(MAINP "\n\nRejs %d zakończony\n\n", shared->nr_rejsu);
+            shared->nr_rejsu++;
+        }
+        else{
+            printf(MAINP "\n\nRejs %d przerwany\n\n", shared->nr_rejsu);
+            break;
+        }
+
+    }
     // Odłączenie pamięci dzielonej
     shmdt(shared);
     return 0;

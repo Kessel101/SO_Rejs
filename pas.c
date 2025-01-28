@@ -22,15 +22,16 @@ int main(int argc, char* argv[]){
     }
 
     enum akcje {czeka, na_brzegu, na_mostku, na_statku, poszedl_do_domu}; 
-    waitsem(semid, 1);
+    //waitsem(semid, 1);
     shared->pasazerowie[id] = czeka;
-    setsem(semid, 1);
+    //setsem(semid, 1);
 
     //struct msgbuf msg;
     setsem(semid, 2);
     while(shared->pasazerowie[id] != poszedl_do_domu){ 
         switch(shared->pasazerowie[id]){
             case czeka:
+                sleep(1);
                 break;
             case na_brzegu:
                 waitsem(semid, 0);

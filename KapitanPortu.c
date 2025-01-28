@@ -1,50 +1,47 @@
-#include "objects.h"
+#include "oprs.h"
 pid_t pidKapitanStatku;
 
 void signal1() {
-    kill(pidKapitanStatku, SIGUSR1);
-    printf(KAPITAN_PORTU "Wyslalem sygnal 1 do kapitana statku (nakaz_wyplyniecia)\n");
+    if (kill(pidKapitanStatku, SIGUSR1) == -1) {
+        perror("Error sending SIGUSR1");
+    } else {
+        printf(KAPITAN_PORTU "Wyslalem sygnal 1 do kapitana statku (nakaz_wyplyniecia)\n");
+    }
 }
 
 void signal2() {
-    kill(pidKapitanStatku, SIGUSR2);
-    printf(KAPITAN_PORTU "Wyslano sygnal 2 do kapitan statku (przerwanie_rejsow)\n");
+    if (kill(pidKapitanStatku, SIGUSR2) == -1) {
+        perror("Error sending SIGUSR2");
+    } else {
+        printf(KAPITAN_PORTU "Wyslano sygnal 2 do kapitana statku (przerwanie_rejsow)\n");
+    }
 }
 
 int main(int argc, char *argv[]) {
+    // Sprawdzenie, czy podano wymagane argumenty
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <shared_memory_id> <pid_kapitana_statku>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
 
+    // Pobranie ID pamięci współdzielonej
     int shmid = atoi(argv[1]);
 
+    // Pobranie PID kapitana statku
+    pidKapitanStatku = atoi(argv[2]);
+    if (pidKapitanStatku <= 0) {
+        fprintf(stderr, "Error: Invalid PID kapitana statku: %d\n", pidKapitanStatku);
+        exit(EXIT_FAILURE);
+    }
 
+    // Podłączenie do pamięci współdzielonej
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
     if (shared == (SharedMemory *)-1) {
-    perror("Błąd przy dołączaniu pamięci dzielonej");
-    exit(EXIT_FAILURE);
-    }
-
-
-    printf(KAPITAN_PORTU "Oczekiwanie na pid kapitana statku przez FIFO\n");
-    
-    // Otwieranie FIFO do odczytu
-    int fifo_fd = open(FIFO_PATH, O_RDONLY);
-    if (fifo_fd == -1) {
-        perror("Blad otwierania kolejki FIFO");
-        unlink(FIFO_PATH);
+        perror("Błąd przy dołączaniu pamięci dzielonej");
         exit(EXIT_FAILURE);
     }
-    
-    // Odczytanie PID kapitana statku z FIFO
-    if (read(fifo_fd, &pidKapitanStatku, sizeof(pidKapitanStatku)) <= 0) {
-        perror("Blad odczytu pidKapitanStatku");
-        close(fifo_fd);
-        unlink(FIFO_PATH);
-        exit(EXIT_FAILURE);
-    }
-    
+
     printf(KAPITAN_PORTU "Otrzymano pid kapitana statku: %d\n", pidKapitanStatku);
-    
-    // Zamknięcie FIFO do odczytu
-    close(fifo_fd);
 
     // Pętla obsługująca komendy od użytkownika
     while (1) {
@@ -54,14 +51,10 @@ int main(int argc, char *argv[]) {
 
         if (strcmp(command, "signal1") == 0) {
             signal1(); // Wysłanie SIGUSR1
-            printf("natychmiastowe_wyplyniecie: %d\n", natychmiastowe_wyplyniecie);
-            natychmiastowe_wyplyniecie = 1;
-            printf("natychmiastowe_wyplyniecie: %d\n", natychmiastowe_wyplyniecie);
-            nakaz = 1;
+            shared->nakaz_odplyniecia = 1;
         } else if (strcmp(command, "signal2") == 0) {
             signal2(); // Wysłanie SIGUSR2
-            przerwanie_rejsow = 1;
-            printf("przerwanie_rejsow: %d\n", przerwanie_rejsow);
+            shared->przerwanie_rejsow = 1;
         } else if (strcmp(command, "exit") == 0) {
             printf(KAPITAN_PORTU "Zamykanie programu\n");
             break;
@@ -69,8 +62,6 @@ int main(int argc, char *argv[]) {
             printf(KAPITAN_PORTU "Nieznana komenda: %s\n", command);
         }
     }
-    
-    // Usuwanie kolejki FIFO
-    unlink(FIFO_PATH);
+
     return 0;
 }
