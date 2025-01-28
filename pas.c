@@ -1,7 +1,7 @@
 #include "oprs.h"
 
 int main(int argc, char* argv[]){
-    if (argc != 5) {
+    if (argc != 4) {
         fprintf(stderr, "Błąd: Brak argumentu shmid\n");
         exit(1);
     }
@@ -9,8 +9,6 @@ int main(int argc, char* argv[]){
     int id = atoi(argv[1]);
     int shmid = atoi(argv[2]);
     int semid = atoi(argv[3]);
-    int key = atoi(argv[4]);
-
 
     printf(PASAZER "Utworzono pasazera %d\n", id);
 
@@ -37,7 +35,6 @@ int main(int argc, char* argv[]){
                 waitsem(semid, 0);
                 //printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
                 wejdz_na_mostek(shared, semid, id); //pasazerowie wchodza na mostek
-                //printf("aas");
                 setsem(semid, 0);
                 break;
             case na_mostku:
@@ -46,7 +43,6 @@ int main(int argc, char* argv[]){
                 setsem(semid, 0);
                 break;
             case na_statku:
-                //setsem(semid, 1);
                 waitsem(semid, 3); //czekaj na rozkaz opuszczenia mostka
                 setsem(semid, 3);
                 zejdz_na_brzeg(shared, id); //pasazerowie schodza na brzeg i wracaja do domu

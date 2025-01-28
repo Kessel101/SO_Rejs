@@ -12,11 +12,16 @@ void setsem(int semid, int semnum) {
 }
 
 void waitsem(int semid, int semnum) {
-    struct sembuf op = {semnum, -1, 0};
+    struct sembuf op = {semnum, -1, 0}; //
     //printf("Process %d: Przed waitsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
-    if (semop(semid, &op, 1) == -1) {
+    if (semop(semid, &op, 1) == -1) { //if errno == EINTR {semop(semid, &op, 1) == -1)} else perror("Error in semop (waitsem)"); w raporcie czy poprawione napisac
+        if(errno == EINTR){
+            semop(semid, &op, 1);    
+        }
+        else{
         perror("Error in semop (waitsem)");
         exit(EXIT_FAILURE);
+        }
     }
     //printf("Process %d: Po waitsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
 }

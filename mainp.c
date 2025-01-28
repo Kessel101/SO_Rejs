@@ -1,7 +1,11 @@
+#define _XOPEN_SOURCE 700
 #include "oprs.h"
 
 
 extern int errno; // Deklaracja errno
+int shmid = -1;
+int semid = -1;
+
 
 void sprawdz_dane() {
     if (LICZBA_PASAZEROW > 300) {
@@ -22,8 +26,41 @@ void sprawdz_dane() {
 }
 
 
+void cleanup() {
+    while(wait(NULL) > 0);
+    if (shmid != -1) {
+        shmctl(shmid, IPC_RMID, NULL);
+    }
+    if (semid != -1) {
+        for (int i = 0; i < 6; i++) {
+            semctl(semid, i, IPC_RMID); 
+        }
+    }
+    unlink("A");
+}
+
+// Obsługa sygnałów
+void signal_handler(int signum) {
+    printf("gine\n");
+    while(wait(NULL) > 0);
+    cleanup();
+    exit(EXIT_FAILURE);
+}
+
+
 
 int main(){
+
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sa.sa_flags = 0;                
+    sigemptyset(&sa.sa_mask);       
+
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        perror("Nie udało się zarejestrować obsługi SIGINT");
+        exit(EXIT_FAILURE);
+    }
+
 
     sprawdz_dane();
 
@@ -57,21 +94,6 @@ int main(){
     }
 
 
-    // Sprawdzenie, czy kolejka FIFO istnieje
-    struct stat st;
-    if (stat(FIFO_PATH, &st) == 0) {
-        // Jeśli plik istnieje, usuwamy go
-        if (unlink(FIFO_PATH) == 0) {
-            printf("Kolejka FIFO '%s' została usunięta.\n", FIFO_PATH);
-        } else {
-            perror("Nie udało się usunąć kolejki FIFO");
-        }
-    }
-
-    if (mkfifo(FIFO_PATH , 0666) == -1) {
-        perror("Blad tworzenia kolejki FIFO");
-        exit(EXIT_FAILURE);
-    }
     
     int semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
     if (semid == -1) {
@@ -103,6 +125,7 @@ int main(){
         }
 
 
+    
 
     shared->nr_rejsu = 0;
     shared->status = 0;
@@ -121,7 +144,7 @@ int main(){
     for(int i = 0; i < LICZBA_PASAZEROW; i++){
         if(fork() == 0){
             sprintf(id, "%d", i);
-            execl("./pasazerowie", "pasazerowie", id, shmid_str, semid_str, key_str, (char *)NULL);
+            execl("./pasazerowie", "pasazerowie", id, shmid_str, semid_str, (char *)NULL);
             perror("exec pasazer nie powiódł się");
             unlink("A");
             exit(1);
@@ -170,7 +193,6 @@ int main(){
         semctl(semid, i, IPC_RMID);
         }
         shmctl(shmid, IPC_RMID, NULL);
-        unlink(FIFO_PATH);
         unlink("A");
         return 0;
 }

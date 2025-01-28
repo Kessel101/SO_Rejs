@@ -23,11 +23,10 @@
 
 #define N 20 //liczba miejsc na statku
 #define K 6 //liczba miejsc na mostku
-#define R 1 //liczba rejsów w ciągu dnia
+#define R 3 //liczba rejsów w ciągu dnia
 #define T1 8 //czas na załadunek
 #define T2 1 //czas rejsu 
 #define LICZBA_PASAZEROW 100 //liczba pasażerów danego dnia
-#define FIFO_PATH "/tmp/port_fifo" 
 
 
 //kolory czcionki
