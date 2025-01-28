@@ -1,18 +1,35 @@
 #include "oprs.h"
 
 
-void main_finish(SharedMemory* shared, int shmid, int semid){
-    shmdt(shared);
-        for(int i = 0; i < 6; i++){ //usuwanie semaforów
-        semctl(semid, i, IPC_RMID);
-        }
-        shmctl(shmid, IPC_RMID, NULL);
-        unlink(FIFO_PATH);
-        unlink("A");
+extern int errno; // Deklaracja errno
+
+void sprawdz_dane() {
+    if (LICZBA_PASAZEROW > 300) {
+        errno = EINVAL; // Błąd: niewłaściwa wartość argumentu
+        perror("Zbyt duza liczba pasazerow");
+        exit(EXIT_FAILURE);
+    }
+    if (K < 0 || N < 0 || R < 0 || T1 <= 0 || T2 <= 0 || LICZBA_PASAZEROW < 0) {
+        errno = ERANGE; // Błąd: wartość poza zakresem
+        perror("Liczby musza byc nieujemne lub dodatnie");
+        exit(EXIT_FAILURE);
+    }
+    if (K > N) {
+        errno = EDOM; // Błąd: argument poza zakresem domeny
+        perror("Mostek wiekszy od statku");
+        exit(EXIT_FAILURE);
+    }
 }
 
 
+
+
+
 int main(){
+
+    sprawdz_dane();
+
+
     FILE *temp_file = fopen("A", "w");
     if (temp_file == NULL) {
         perror("Error creating temporary file A");
@@ -133,22 +150,16 @@ int main(){
 
         setsem(semid, 1);
         
-    
 
-        int pid = fork();
-
-        if (pid == 0) {
-            execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char *)NULL);
+        if (fork( )== 0) {
+            execl("./kapitanportu", "./kapitanportu", shmid_str, (char *)NULL);
             perror("Nie udało się uruchomić kapitana portu");
             exit(1);
         }
-        else{
-            waitpid(pid, NULL, 0);
-        }
 
 
-        /*int pid = fork();
-        if( pid != 0){
+        int pid = fork();
+        if( pid == 0){
             
             waitpid(pid, NULL, 0);
         }
@@ -185,7 +196,7 @@ int main(){
             unlink("A");
             exit(1);
         }
-        */
+        
 
         printf("tu\n");
 
