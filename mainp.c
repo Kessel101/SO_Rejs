@@ -11,12 +11,12 @@ void sprawdz_dane() {
     }
     if (K < 0 || N < 0 || R < 0 || T1 <= 0 || T2 <= 0 || LICZBA_PASAZEROW < 0) {
         errno = ERANGE; // Błąd: wartość poza zakresem
-        perror("Liczby musza byc nieujemne lub dodatnie");
+        perror( "Liczby musza byc nieujemne lub dodatnie");
         exit(EXIT_FAILURE);
     }
     if (K > N) {
         errno = EDOM; // Błąd: argument poza zakresem domeny
-        perror("Mostek wiekszy od statku");
+        perror( "Mostek wiekszy od statku");
         exit(EXIT_FAILURE);
     }
 }
@@ -160,49 +160,6 @@ int main(){
         while (wait(NULL) > 0);
     }
 
-
-
-    //setsem(semid, 1);
-
-        
-        /*if (fork( )== 0) {
-            execl("./kapitanportu", "./kapitanportu", shmid_str, (char *)NULL);
-            perror("Nie udało się uruchomić kapitana portu");
-            exit(1);
-        }
-        
-
-
-        int pid = fork();
-        if( pid != 0){
-            
-            //waitpid(pid, NULL, 0);
-        }
-        else{
-            
-            // Wywołanie programu
-            execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char *)NULL);
-
-            // Jeśli exec się nie powiedzie, obsługujemy błąd
-            perror("exec nie powiódł się");
-            unlink("A");
-            exit(1);
-        }*/
-        
-
-        
-        
-        printf("tu\n");
-
-        
-
-        
-
-    
-
-        wyrzuc_pasazerow(shared);
-
-        
 
 
         printf(MAINP "\n\nKoniec rejsow na dzis! Statystyki:\n-liczba resjow: %d\n-liczba przewiezionych pasazerow: %d\n-odprawionych pasazerow: %d", shared->nr_rejsu, shared->liczba_przewiezionych, LICZBA_PASAZEROW - shared->liczba_przewiezionych);

@@ -21,6 +21,20 @@ void waitsem(int semid, int semnum) {
     //printf("Process %d: Po waitsem: Semafor %d: %d\n", getpid(), semnum, semctl(semid, semnum, GETVAL));
 }
 
+void waitsem_nowait(int semid, int num) {
+    struct sembuf sb;
+    sb.sem_num = num;
+    sb.sem_op = -1;
+    sb.sem_flg = IPC_NOWAIT; 
+
+    if (semop(semid, &sb, 1) == -1) {
+        if (errno != EAGAIN) {
+            perror("Błąd operacji na semaforze");
+            exit(1);
+        }
+    }
+}
+
 void przejscie_na_mostku(SharedMemory* shared){ //PRZEJSCIE DOKONUJE SIE PRZED ZMNIEJSZENIEM LICZBY NA MOSTKU
     for(int i = 1; i < K; i++){
         shared->mostek[i - 1] = shared->mostek[i];
@@ -30,10 +44,11 @@ void przejscie_na_mostku(SharedMemory* shared){ //PRZEJSCIE DOKONUJE SIE PRZED Z
     }
 
 }
+SharedMemory *shared;
 
 
 void wejdz_na_mostek(SharedMemory* shared, int semid, int id) {
-    if((id == 0 || shared->pasazerowie[id - 1] == 4 || (shared->pasazerowie[id - 1] > 1 && shared->liczba_na_mostku < K) && shared->pasazerowie[id] != 2)){
+    if((id == 0 || shared->pasazerowie[id - 1] == 4 || (shared->pasazerowie[id - 1] > 1 && shared->liczba_na_mostku < K) && shared->pasazerowie[id] < 2)){
         int i = shared->liczba_na_mostku;
         printf(PASAZER "Pasazer %d wszedł na mostek i zajal %d pozycje\n", id, shared->liczba_na_mostku);
         //waitsem(semid, 1);
@@ -105,9 +120,33 @@ void wyrzuc_pasazerow (SharedMemory* shared){
 }
 
 void set_color(const char *color_code) {
-    printf("\033[%sm", color_code);  // Ustaw kolor na podstawie kodu
+    printf("\033[%sm", color_code);  
 }
 
 void reset_color() {
-    printf("\033[0m");  // Resetuj kolor do domyślnego
+    printf("\033[0m"); 
+}
+
+SharedMemory* dolacz_pamiec(int shmid) {
+    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
+    
+    if (shared == (SharedMemory *)-1) {
+        perror("Error in shmat"); 
+        errno = EFAULT;
+        return NULL;
+    }
+    
+    return shared;
+}
+
+void ewakuacja(SharedMemory* shared){
+    for(int i = 0; i < LICZBA_PASAZEROW; i++){
+        shared->pasazerowie[i] = 4;
+        if(i < N){
+            shared->zaloga[i] = -1;
+        }
+        if(i < K){
+            shared->mostek[i] = -1;
+        }
+    }
 }

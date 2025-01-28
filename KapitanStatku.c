@@ -2,8 +2,10 @@
 #include "oprs.h"
 
 volatile sig_atomic_t nakaz;
-
+int semid;
 SharedMemory *shared;
+
+
 void handle_signal1(int sig) {
     shared->nakaz_odplyniecia = 1;
     printf("[HANDLER] Otrzymano signal 1 (natychmiastowe wypłynięcie). Flaga ustawiona na 1.\n");
@@ -11,16 +13,21 @@ void handle_signal1(int sig) {
 
 // Handler dla signal 2
 void handle_signal2(int sig) {
-    shared->przerwanie_rejsow = 1;
-    if(shared->status < 2){
-        kaz_pasazerom_czekac(shared);
-        opuscic_mostek(shared);
-        wyrzuc_pasazerow(shared);
-        shmdt(shared);
-        exit(1);
-    }
-    shared->status = 5;
+    
     printf("[HANDLER] Otrzymano signal 2 (przerwanie rejsów). Flaga ustawiona na 1.\n");
+    shared->przerwanie_rejsow = 1;
+    shared->status = 5;
+
+    for (int i = 0; i < LICZBA_PASAZEROW; i++) {
+        kaz_pasazerom_czekac(shared);
+        if (shared->pasazerowie[i] != 4) {
+            // Czekamy na dostęp do semafora, jeśli trzeba (możesz dodać semafory, jeśli potrzebujesz)
+            waitsem(semid, 0);
+            shared->pasazerowie[i] = 4; // Ustawiamy ich status na 'poszedl_do_domu'
+            setsem(semid, 0);
+            printf("Pasazer %d został usunięty. Status ustawiony na 'poszedl_do_domu'.\n", i);
+        }
+    }
 }
 
     
@@ -51,7 +58,7 @@ int main(int argc, char *argv[]) {
 
     // Odbiór shmid z argumentów
     int shmid = atoi(argv[1]);
-    int semid = atoi(argv[2]);
+    semid = atoi(argv[2]);
     int key = atoi(argv[3]);
 
 
@@ -66,7 +73,6 @@ int main(int argc, char *argv[]) {
     
 
     //Koniec przygotowań do wpuszczenia pasażerów
-    printf("tutaj\n");
     //waitsem(semid, 1);
     for(int i = 0; i < K; i++){ //inicjalizacja mostka
             shared->mostek[i] = -1;
@@ -85,6 +91,8 @@ int main(int argc, char *argv[]) {
     
 
     while(shared->nr_rejsu < R && shared->przerwanie_rejsow == 0){
+
+
 
 
         if(shared->liczba_przewiezionych == LICZBA_PASAZEROW){
@@ -121,39 +129,49 @@ int main(int argc, char *argv[]) {
         printf(KAPITAN_STATKU "\nODPLYWAMY WCZESNIEJ\n");
     }
 
+
+
     shared->status = 1; //Rozpoczecie przygotowan do wyplyniecia
     
-    //waitsem(semid, 1);
+
+
     kaz_pasazerom_czekac(shared);
     opuscic_mostek(shared);
-    //setsem(semid, 1);
 
-    printf(KAPITAN_STATKU "\n\nKapitan Statku: Odplywamy!\n\n");
-    shared->status = 2;
+        shared->status = 2;
+        printf(KAPITAN_STATKU "\n\nKapitan Statku: Odplywamy!\n\n");
 
-    //Rejs trwa
-    sleep(T2);
+        //Rejs trwa
+        sleep(T2);
 
 
-    printf(KAPITAN_STATKU "\n\nKapitan Statku: Powracamy\n\n\n");
-    if(shared->status != 5) {
+        printf(KAPITAN_STATKU "\n\nKapitan Statku: Powracamy\n\n\n");
+        
         shared->status = 3; //Rozladowanie po rejsie
-    }
+        
 
-    shared->liczba_przewiezionych += shared->liczba_na_statku;
+        shared->liczba_przewiezionych += shared->liczba_na_statku;
 
-    setsem(semid, 3);
-    while(shared->liczba_na_statku > 0){
-        sleep(1);
-    }
+        setsem(semid, 3);
+        while(shared->liczba_na_statku > 0){
+            sleep(1);
+        }
+    
 
-    if(shared->status != 5) {
+    if(shared->nr_rejsu + 1 < R && shared->przerwanie_rejsow == 0) {
         shared->status = 4; 
         printf(MAINP "\n\nRejs %d zakończony\n\n", shared->nr_rejsu);
         shared->nr_rejsu++;
     }
     else{
-        printf(MAINP "\n\nRejs %d przerwany\n\n", shared->nr_rejsu);
+        shared->status = 5;
+        setsem(semid, 3);
+        while(shared->liczba_na_statku > 0){
+            sleep(1);
+        }
+        printf(MAINP "\n\nOstatni rejs na dziś. Numer: %d\n\n", shared->nr_rejsu);
+        wyrzuc_pasazerow(shared);
+        shared->nr_rejsu++;
         break;
     }
     }

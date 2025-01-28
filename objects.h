@@ -21,12 +21,12 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define N 15 //liczba miejsc na statku
+#define N 20 //liczba miejsc na statku
 #define K 6 //liczba miejsc na mostku
-#define R 3 //liczba rejsów w ciągu dnia
+#define R 1 //liczba rejsów w ciągu dnia
 #define T1 8 //czas na załadunek
 #define T2 1 //czas rejsu 
-#define LICZBA_PASAZEROW 30 //liczba pasażerów danego dnia
+#define LICZBA_PASAZEROW 100 //liczba pasażerów danego dnia
 #define FIFO_PATH "/tmp/port_fifo" 
 
 
@@ -43,7 +43,7 @@
 //pamięć dzielona
 typedef struct shared {
     int status; // 0 - przygotowanie do wypłynięcia, 1 - decyzja o wyruszeniu 2 - rejs trwa,
-// 3 - rozładowanie po rejsie // 4 - koniec rejsu // 5 - przerwanie rejsu
+// 3 - rozładowanie po rejsie // 4 - koniec rejsu // 5 - koniec dnia
     int pasazerowie[LICZBA_PASAZEROW]; //tablica ze stanem pasazerow
     int nr_rejsu; //liczba określająca obecny numer rejsu
     int mostek[K]; //tablica określająca mostek, z której można dostać się na statek lub na brzeg

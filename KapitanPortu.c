@@ -35,11 +35,12 @@ int main(int argc, char *argv[]) {
     }
 
     // Podłączenie do pamięci współdzielonej
-    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
+    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0); // Podłączenie pamięci dzielonej
     if (shared == (SharedMemory *)-1) {
-        perror("Błąd przy dołączaniu pamięci dzielonej");
+        perror("Error in shmat");
         exit(EXIT_FAILURE);
     }
+
 
     printf(KAPITAN_PORTU "Otrzymano pid kapitana statku: %d\n", pidKapitanStatku);
 
@@ -62,6 +63,6 @@ int main(int argc, char *argv[]) {
             printf(KAPITAN_PORTU "Nieznana komenda: %s\n", command);
         }
     }
-
+    shmdt(shared);
     return 0;
 }
