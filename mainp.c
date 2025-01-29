@@ -27,15 +27,22 @@ void sprawdz_dane() {
 
 
 void cleanup() {
-    while(wait(NULL) > 0);
+    while (wait(NULL) > 0);
+    // Usuwanie pamięci współdzielonej
     if (shmid != -1) {
-        shmctl(shmid, IPC_RMID, NULL);
-    }
-    if (semid != -1) {
-        for (int i = 0; i < 6; i++) {
-            semctl(semid, i, IPC_RMID); 
+        if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+            perror("Błąd usuwania pamięci współdzielonej");
         }
     }
+    // Usuwanie semaforów
+    if (semid != -1) {
+        for (int i = 0; i < 6; i++) {
+            if (semctl(semid, i, IPC_RMID) == -1 && errno != EINVAL) {
+                perror("Błąd usuwania semaforów");
+            }
+        }
+    }
+    // Usuwanie plików tymczasowych
     unlink("A");
 }
 
@@ -75,30 +82,30 @@ int main(){
     key_t key = ftok("A", 65);  // Generowanie klucza
     if (key == -1) {
     perror("Error in ftok (mainp)");
-    unlink("A");
+    cleanup();
     exit(EXIT_FAILURE);
     }
 
-    int shmid = shmget(key, sizeof(SharedMemory), 0666 | IPC_CREAT); // Tworzenie segmentu pamięci dzielonej
+    shmid = shmget(key, sizeof(SharedMemory), 0666 | IPC_CREAT); // Tworzenie segmentu pamięci dzielonej
     if (shmid == -1) {
     perror("Error in shmget");
-    unlink("A");
+    cleanup();
     exit(EXIT_FAILURE);
     }
 
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0); // Podłączenie pamięci dzielonej
     if (shared == (SharedMemory *)-1) {
     perror("Error in shmat");
-    unlink("A");
+    cleanup();
     exit(EXIT_FAILURE);
     }
 
 
     
-    int semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
+    semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
     if (semid == -1) {
     perror("Error in semget");
-    unlink("A");
+    cleanup();
     exit(EXIT_FAILURE);
     }
 
@@ -116,13 +123,13 @@ int main(){
     semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
     if (semid == -1) {
     perror("Error in semget");
-    unlink("A");
+    cleanup();
     exit(EXIT_FAILURE);
     }
 
     for(int i = 0; i < 6; i++){ //inicjalizacja semaforów
         semctl(semid, i, SETVAL, 0);
-        }
+    }
 
 
     
@@ -146,7 +153,7 @@ int main(){
             sprintf(id, "%d", i);
             execl("./pasazerowie", "pasazerowie", id, shmid_str, semid_str, (char *)NULL);
             perror("exec pasazer nie powiódł się");
-            unlink("A");
+            cleanup();
             exit(1);
         }
     }
@@ -156,13 +163,14 @@ int main(){
     {
     case -1:
         perror("Blad podczas tworzenia pid_statku_kapitan");
+        cleanup();
         exit(1);
         break;
     case 0:
         printf("Tworze kapitana\n");
         execl("./kapitanstatku", "./kapitanstatku", shmid_str, semid_str, key_str, (char *)NULL);
         perror("exec nie powiódł się");
-        unlink("A");
+        cleanup();
         exit(1);
     default:
             break;
@@ -171,28 +179,30 @@ int main(){
     char pid_str[20] = {};
     sprintf(pid_str, "%d", pid_statku_kapitan);
 
-    switch(fork()){
+
+    pid_t pid_portu_kapitan= fork();
+    switch(pid_portu_kapitan){
         case -1:
         perror("Błąd przy fork() kapitan portu");
+            cleanup();
             exit(1);
         case 0:
             execl("./kapitanportu", "./kapitanportu", shmid_str, pid_str, (char *)NULL);
             perror("Nie udało się uruchomić kapitana portu");
+            cleanup();
             exit(1);
         default:
-        while (wait(NULL) > 0);
+            break;
     }
 
+    waitpid(pid_statku_kapitan, NULL, 0);
+    kill(pid_portu_kapitan, SIGTERM);
+    while(wait(NULL) > 0);
 
-
-        printf(MAINP "\n\nKoniec rejsow na dzis! Statystyki:\n-liczba resjow: %d\n-liczba przewiezionych pasazerow: %d\n-odprawionych pasazerow: %d", shared->nr_rejsu, shared->liczba_przewiezionych, LICZBA_PASAZEROW - shared->liczba_przewiezionych);
-        printf("\n\n\n");
-        // Usuwanie pamięci dzielonej
-        shmdt(shared);
-        for(int i = 0; i < 6; i++){ //usuwanie semaforów
-        semctl(semid, i, IPC_RMID);
-        }
-        shmctl(shmid, IPC_RMID, NULL);
-        unlink("A");
-        return 0;
+    printf(MAINP "\n\nKoniec rejsow na dzis! Statystyki:\n-liczba resjow: %d\n-liczba przewiezionych pasazerow: %d\n-odprawionych pasazerow: %d", shared->nr_rejsu, shared->liczba_przewiezionych, LICZBA_PASAZEROW - shared->liczba_przewiezionych);
+    printf("\n\n\n");
+    // Usuwanie pamięci dzielonej
+    shmdt(shared);
+    cleanup();
+    return 0;
 }

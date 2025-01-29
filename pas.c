@@ -1,4 +1,27 @@
+#define _XOPEN_SOURCE 700
 #include "oprs.h"
+
+int shmid;
+SharedMemory *shared;
+
+
+void cleanup() {
+    if (shared != NULL) {
+        shmdt(shared);
+        shared = NULL;
+    }
+    printf("[PASAŻER] Pamięć dzielona odłączona.\n");
+}
+
+void signal_handler(int signum) {
+    printf("[PASAŻER] Otrzymano sygnał SIGTERM. Kończę pracę.\n");
+    cleanup();
+    exit(EXIT_SUCCESS);
+}
+
+
+
+
 
 int main(int argc, char* argv[]){
     if (argc != 4) {
@@ -7,17 +30,24 @@ int main(int argc, char* argv[]){
     }
 
     int id = atoi(argv[1]);
-    int shmid = atoi(argv[2]);
+    shmid = atoi(argv[2]);
     int semid = atoi(argv[3]);
 
     printf(PASAZER "Utworzono pasazera %d\n", id);
 
 
-    SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
+    shared = (SharedMemory *)shmat(shmid, NULL, 0);
     if (shared == (SharedMemory *)-1) {
         perror("Błąd przy dołączaniu pamięci współdzielonej");
         exit(EXIT_FAILURE);
     }
+
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGTERM, &sa, NULL);
+
 
     enum akcje {czeka, na_brzegu, na_mostku, na_statku, poszedl_do_domu}; 
     //waitsem(semid, 1);

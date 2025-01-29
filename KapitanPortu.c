@@ -1,5 +1,22 @@
+#define _XOPEN_SOURCE 700
 #include "oprs.h"
 pid_t pidKapitanStatku;
+
+int shmid = -1;
+SharedMemory *shared = NULL;
+
+void cleanup() {
+    if (shared != NULL) {
+        shmdt(shared);
+        shared = NULL;
+    }
+}
+
+void signal_handler(int signum) {
+    printf(KAPITAN_PORTU "Kapitan portu: Otrzymano sygnał %d. Kończę pracę.\n", signum);
+    cleanup();
+    exit(0); 
+}
 
 void signal1() {
     if (kill(pidKapitanStatku, SIGUSR1) == -1) {
@@ -22,6 +39,17 @@ int main(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: %s <shared_memory_id> <pid_kapitana_statku>\n", argv[0]);
         exit(EXIT_FAILURE);
+    }
+
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    if (sigaction(SIGTERM, &sa, NULL) == -1) {
+        perror("Błąd ustawiania handlera dla SIGTERM");
+        cleanup();
+        exit(1);
     }
 
     // Pobranie ID pamięci współdzielonej
