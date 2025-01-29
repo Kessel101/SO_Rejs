@@ -50,8 +50,8 @@ typedef struct shared {
     int liczba_na_mostku; //liczba określająca obecną liczbę ludzi na mostku
     int liczba_na_statku;  //liczba określająca obecną liczbę ludzi na statku
     int liczba_przewiezionych; //liczba ludzi, którzy odbyli już podróż statkiem i poszli w swoją stronę
-    int nakaz_odplyniecia;
-    int przerwanie_rejsow;
+    int nakaz_odplyniecia; //nakaz pdlyniecia od kapitana portu
+    int przerwanie_rejsow; //nakaz przerwania rejsow od kapitana portu
 } SharedMemory;
 
 #endif

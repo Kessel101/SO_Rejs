@@ -4,7 +4,6 @@
 int shmid;
 SharedMemory *shared;
 
-
 void cleanup() {
     if (shared != NULL) {
         shmdt(shared);
@@ -35,7 +34,6 @@ int main(int argc, char* argv[]){
 
     printf(PASAZER "Utworzono pasazera %d\n", id);
 
-
     shared = (SharedMemory *)shmat(shmid, NULL, 0);
     if (shared == (SharedMemory *)-1) {
         perror("Błąd przy dołączaniu pamięci współdzielonej");
@@ -48,13 +46,9 @@ int main(int argc, char* argv[]){
     sa.sa_flags = 0;
     sigaction(SIGTERM, &sa, NULL);
 
-
     enum akcje {czeka, na_brzegu, na_mostku, na_statku, poszedl_do_domu}; 
-    //waitsem(semid, 1);
     shared->pasazerowie[id] = czeka;
-    //setsem(semid, 1);
 
-    //struct msgbuf msg;
     setsem(semid, 2);
     while(shared->pasazerowie[id] != poszedl_do_domu){ 
         switch(shared->pasazerowie[id]){
@@ -63,7 +57,6 @@ int main(int argc, char* argv[]){
                 break;
             case na_brzegu:
                 waitsem(semid, 0);
-                //printf("Wartosc semafora 0: %d\n", semctl(semid, 0, GETVAL));
                 wejdz_na_mostek(shared, semid, id); //pasazerowie wchodza na mostek
                 setsem(semid, 0);
                 break;
@@ -78,7 +71,6 @@ int main(int argc, char* argv[]){
                 zejdz_na_brzeg(shared, id); //pasazerowie schodza na brzeg i wracaja do domu
                 break;
         }
-        //setsem(semid, 1);
     }
     shmdt(shared);
     return 0;

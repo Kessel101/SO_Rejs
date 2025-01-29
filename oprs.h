@@ -5,7 +5,7 @@
 
 void setsem(int semid, int semnum); //robi operację 1 na semaforze, pozwalając innym na użycie semwait na tym semaforze 
 void waitsem(int semid, int semnum); //robi operacje -1 na semaforze, czyli czeka aż ktoś zwiększy wartość do 1
-void waitsem_nowait(int semid, int num);
+
 void przejscie_na_mostku(SharedMemory* shared); //symulacja przejscia na mostku podczas wchodzenia na pokład, tj.
 //gdy osoba na mostek[0] wchodzi na statek, wszystkie osoby za nia przesuwają się o jedną pozycję do przodu
 
@@ -22,10 +22,8 @@ void zapros_pasazerow(SharedMemory* shared); // funkcja wykorszystywana przez ka
 void kaz_pasazerom_czekac(SharedMemory* shared); //funckja wykorzystywana przez kapitana w parze z opuścić mostek. rozkazuje pasażerom nie wchodzić na mostek,
 // bo zaraz nastąpi odpłynięcie
 void wyrzuc_pasazerow (SharedMemory* shared); // funckja używana pod koniec dnia, gdy wszystkie zaplanowane rejsy już się odbyły. rozkazuje pasażerom odejść
-void set_color(const char *color_code); //30 — czarny, 31 — czerwony, 32 — zielony, 33 — żółty, 34 — niebieski, 35 — fioletowy, 36 — cyjanowy, 37 — biały
-void reset_color(); //resetuje poprzednio wybrany kolor
 SharedMemory* dolacz_pamiec(int shmid); //funckja zwracająca wskaźnik do struktury SharedMemory z wykorszystaniem errno EFAULT-bad address
-void ewakuacja(SharedMemory* shared);
+
 
 
 

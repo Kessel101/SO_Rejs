@@ -124,14 +124,6 @@ void wyrzuc_pasazerow (SharedMemory* shared){
     }
 }
 
-void set_color(const char *color_code) {
-    printf("\033[%sm", color_code);  
-}
-
-void reset_color() {
-    printf("\033[0m"); 
-}
-
 SharedMemory* dolacz_pamiec(int shmid) {
     SharedMemory *shared = (SharedMemory *)shmat(shmid, NULL, 0);
     
@@ -140,18 +132,5 @@ SharedMemory* dolacz_pamiec(int shmid) {
         errno = EFAULT;
         return NULL;
     }
-    
     return shared;
-}
-
-void ewakuacja(SharedMemory* shared){
-    for(int i = 0; i < LICZBA_PASAZEROW; i++){
-        shared->pasazerowie[i] = 4;
-        if(i < N){
-            shared->zaloga[i] = -1;
-        }
-        if(i < K){
-            shared->mostek[i] = -1;
-        }
-    }
 }

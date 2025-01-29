@@ -1,11 +1,9 @@
 #define _XOPEN_SOURCE 700
 #include "oprs.h"
 
-
 extern int errno; // Deklaracja errno
 int shmid = -1;
 int semid = -1;
-
 
 void sprawdz_dane() {
     if (LICZBA_PASAZEROW > 300) {
@@ -24,7 +22,6 @@ void sprawdz_dane() {
         exit(EXIT_FAILURE);
     }
 }
-
 
 void cleanup() {
     while (wait(NULL) > 0);
@@ -56,6 +53,8 @@ void signal_handler(int signum) {
 
 
 
+
+
 int main(){
 
     struct sigaction sa;
@@ -67,7 +66,6 @@ int main(){
         perror("Nie udało się zarejestrować obsługi SIGINT");
         exit(EXIT_FAILURE);
     }
-
 
     sprawdz_dane();
 
@@ -99,27 +97,7 @@ int main(){
     cleanup();
     exit(EXIT_FAILURE);
     }
-
-
     
-    semid = semget(key, 6, IPC_CREAT|0600); // Tworzenie semaforów
-    if (semid == -1) {
-    perror("Error in semget");
-    cleanup();
-    exit(EXIT_FAILURE);
-    }
-
-    for (int i = 0; i < 6; i++) {
-        if (semctl(semid, i, GETVAL) != -1 || errno != EINVAL) { // Sprawdzanie istnienia semafora
-            if (semctl(semid, 0, IPC_RMID) == -1) {
-                perror("Error removing semaphore set");
-            }
-            break; // Usunięcie zestawu kończy pętlę
-        } else if (errno == EINVAL) {
-            //printf("Semaphore %d does not exist or set is invalid.\n", i);
-        }
-    }
-
     semid = semget(key, 6, IPC_CREAT|0600); // Tworzenie semaforów
     if (semid == -1) {
     perror("Error in semget");
@@ -131,9 +109,6 @@ int main(){
         semctl(semid, i, SETVAL, 0);
     }
 
-
-    
-
     shared->nr_rejsu = 0;
     shared->status = 0;
     shared->liczba_na_mostku = 0;
@@ -142,11 +117,11 @@ int main(){
     shared->nakaz_odplyniecia = 0;
     shared->przerwanie_rejsow = 0;
     
-    char id[20] = {};
-    char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {};
+    char shmid_str[20] = {},  semid_str[20] = {}, key_str[20] = {}, id[20] = {};
     sprintf(shmid_str, "%d", shmid);
     sprintf(semid_str, "%d", semid);
     sprintf(key_str, "%d", key);
+
 
     for(int i = 0; i < LICZBA_PASAZEROW; i++){
         if(fork() == 0){
@@ -180,7 +155,7 @@ int main(){
     sprintf(pid_str, "%d", pid_statku_kapitan);
 
 
-    pid_t pid_portu_kapitan= fork();
+    pid_t pid_portu_kapitan = fork();
     switch(pid_portu_kapitan){
         case -1:
         perror("Błąd przy fork() kapitan portu");
