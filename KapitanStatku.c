@@ -166,6 +166,7 @@ int main(int argc, char *argv[]) {
         wyrzuc_pasazerow(shared);
         break;
     }
+    
 
     shared->status = 2;
     printf(KAPITAN_STATKU "\n\nKapitan Statku: Odplywamy!\n\n");

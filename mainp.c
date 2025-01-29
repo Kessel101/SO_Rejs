@@ -86,7 +86,7 @@ int main(){
     exit(EXIT_FAILURE);
     }
 
-    shmid = shmget(key, sizeof(SharedMemory), 0666 | IPC_CREAT); // Tworzenie segmentu pamięci dzielonej
+    shmid = shmget(key, sizeof(SharedMemory), 0600 | IPC_CREAT); // Tworzenie segmentu pamięci dzielonej
     if (shmid == -1) {
     perror("Error in shmget");
     cleanup();
@@ -102,7 +102,7 @@ int main(){
 
 
     
-    semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
+    semid = semget(key, 6, IPC_CREAT|0600); // Tworzenie semaforów
     if (semid == -1) {
     perror("Error in semget");
     cleanup();
@@ -120,7 +120,7 @@ int main(){
         }
     }
 
-    semid = semget(key, 6, IPC_CREAT|0666); // Tworzenie semaforów
+    semid = semget(key, 6, IPC_CREAT|0600); // Tworzenie semaforów
     if (semid == -1) {
     perror("Error in semget");
     cleanup();
