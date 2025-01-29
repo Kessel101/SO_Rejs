@@ -45,7 +45,6 @@ void cleanup() {
 
 // Obsługa sygnałów
 void signal_handler(int signum) {
-    printf("gine\n");
     while(wait(NULL) > 0);
     cleanup();
     exit(EXIT_FAILURE);
